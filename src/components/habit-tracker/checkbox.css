@@ -1,0 +1,24 @@
+.habit-checkbox[type="checkbox"]:before {
+
+    display: block;
+    width: 24px;
+    height: 24px;
+    content: "";
+}
+
+.habit-checkbox[type="checkbox"]:after {
+    position: relative;
+    display: block;
+    left: -6px;
+    top: -28px;
+    width: 24px;
+    height: 24px;
+    content: "";
+    background-image: url('/src/assets/icons/habit-check/uncheck.svg');
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.habit-checkbox[type="checkbox"]:checked:after {
+    background-image: url('/src/assets/icons/habit-check/check.svg');
+}

@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    /* Colors */
+    --color-neutral-text: #000000;
+    --color-container-shadow: #444444;
+    --color-neutral-dots: #C3C3C3;
+    --color-neutral-background: #FFFFFF;
+    --color-neutral-border: #D6D6D6;
+
+    --color-highlight-1: #F23737;
+    --color-highlight-2: #FFD303;
+    --color-highlight-3: #5CC2E2;
+    
+    --color-month-jan-1: #80BEAF;
+    --color-month-jan-2: #DFEFEB;
+    --color-month-feb-1: #FF879C;
+    --color-month-feb-2: #FFCAD3;
+    --color-month-mar-1: #FCAC89;
+    --color-month-mar-2: #FEEAE2;
+    --color-month-apr-1: #DEBBB9;
+    --color-month-apr-2: #EFDDDC;
+    --color-month-may-1: #FAB057;
+    --color-month-may-2: #F39042;
+    --color-month-jun-1: #D9D9D9;
+    --color-month-jun-2: #A6AAB7;
+    --color-month-jul-1: #B97692;
+    --color-month-jul-2: #CE9FB3;
+    --color-month-aug-1: #5DA4FF;
+    --color-month-aug-2: #9EC8FF;
+    --color-month-sep-1: #FFE97F;
+    --color-month-sep-2: #EDC767;
+    --color-month-oct-1: #F1854F;
+    --color-month-oct-2: #F8C2A7;
+    --color-month-nov-1: #E5D2A8;
+    --color-month-nov-2: #BCAD8D;
+    --color-month-dec-1: #C4DD96;
+    --color-month-dec-2: #A2B879;
+    
+    --color-notes-blue-light: #82D1EA;
+    --color-notes-blue-dark: #00455A;
+    --color-notes-green-light: #82EA93;
+    --color-notes-green-dark: #1C5925;
+    --color-notes-pink-light: #FF97DC;
+    --color-notes-pink-dark: #7D0152;
+    --color-notes-yellow-light: #FFDF38;
+    --color-notes-yellow-dark: #625308;
+
+    --color-status-complete: #18D16F;
+    --color-status-cancel: #FF2626;
+    
+    /* Fonts */
+    --font-gaegu: 'Gaegu', serif;
+    --font-title: 'Beleriand', sans-serif;
+}
+
+:root {
+    max-width: 1280px;
+    margin: 0;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    font-family: 'Gaegu', sans-serif;
+}
+
+
+html, body {
+    max-width: 1280px;
+    background-color: var(--color-neutral-background);
+    transition: background-color;
+    transition-duration: 0.3s;
+}
+
+p, h1,h2,h3,h4,h5,h6, textarea, input {
+    color: var(--color-neutral-text);
+}
+
+a {
+    text-decoration: none;
+}
+
+.dark {
+    --color-neutral-background: #181818;
+    --color-container-shadow: #FFFFFF;
+    --color-neutral-text: #FFFFFF;
+    --color-status-complete: #1ABC9C;
+}
+
+
+.container {
+    background-color: var(--color-neutral-background);
+    border: var(--color-neutral-text) solid 1px;
+    border-radius: 14px;
+    box-shadow: 10px 8px 0 0 var(--color-container-shadow);
+    transition: background-color;
+    transition-duration: 0.3s;
+}
+
+
+.button {
+    border: var(--color-neutral-text) solid 1px;
+    border-radius: 14px;
+    box-shadow: 8px 6px 0 0 var(--color-status-complete);
+    transition: background-color;
+    transition-duration: 0.3s;
+}
+
+.button-circle {
+    border: black solid 1px;
+    border-radius: 50%;
+    box-shadow: 8px 6px 0 0 #18D16F;
+}
+
+.flip-card {
+    perspective: 1000px;
+}
+
+.flip-card-inner {
+    transition: transform 0.8s;
+    transform-style: preserve-3d;
+}
+
+.flip-card:hover .flip-card-inner {
+    transform: rotateY(180deg);
+}
+
+.flip-card-front, .flip-card-back {
+    -webkit-backface-visibility: hidden; /* Safari */
+    backface-visibility: hidden;
+}
+
+.flip-card-back {
+    background-color: var(--color-neutral-background);
+    color: white;
+    transform: rotateY(180deg);
+}
+
+@font-face {
+    font-family: 'Gaegu';
+    src: url('/src/assets/fonts/gaegu/Gaegu-Regular.ttf');
+}
+
+@font-face {
+    font-family: 'Beleriand';
+    src: url('/src/assets/fonts/Beleriand.ttf');
+}
+@media only screen and (max-width: 1100px) {
+    :root {
+        overflow-y: scroll;
+    }
+}
