@@ -32,7 +32,7 @@ git clone https://github.com/YOUR_USERNAME/hannas-habits-frontend.git
 cd hannas-habits-frontend
 
 npm install
-npm run dev```
+npm run dev´´´
 
 App will be running at:
 👉 http://localhost:5173
