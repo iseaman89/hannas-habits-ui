@@ -3,8 +3,8 @@
 
 This is the **frontend** of the fullstack project *Hanna’s Habits* – a habit-tracking and journaling web app built with React and .NET backend.
 
-🔗 **Backend repository**: [hannas-habits-backend](https://github.com/YOUR_USERNAME/hannas-habits-backend)  
-🔗 **Main project overview**: [hannas-habits](https://github.com/YOUR_USERNAME/hannas-habits)
+🔗 **Backend repository**: [hannas-habits-backend](https://github.com/iseaman89/hannas-habits-server)  
+🔗 **Main project overview**: [hannas-habits](https://github.com/iseaman89/hannas-habits)
 
 ---
 
@@ -24,13 +24,13 @@ This is the **frontend** of the fullstack project *Hanna’s Habits* – a habit
 
 #### Prerequisites
 - Node.js (v18+ recommended)
-- Backend API running (see [backend setup](https://github.com/YOUR_USERNAME/hannas-habits-backend))
+- Backend API running (see [backend setup](https://github.com/iseaman89/hannas-habits-server))
 
 #### Steps
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/hannas-habits-frontend.git
-cd hannas-habits-frontend
+git clone https://github.com/iseaman89/hannas-habits-ui.git
+cd hannas-habits-ui
 
 npm install
 npm run dev
