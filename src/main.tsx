@@ -1,12 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { createBrowserRouter } from 'react-router-dom';
-import { LucideProvider } from 'lucide-react';
 import '@fontsource/caprasimo/400.css';
 import '@fontsource-variable/figtree/wght.css';
-import { App } from '@/app/App';
-import { routes } from '@/app/routes';
-import { session } from '@/features/auth/appSession';
+import { StartupError } from '@/app/StartupError';
+import { apiUrlProblem } from '@/shared/api/apiUrl';
 import { applyTheme, getInitialTheme } from '@/shared/lib/theme';
 import './index.css';
 
@@ -17,14 +14,34 @@ const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Root element #root not found in index.html');
 }
+const root = rootElement;
 
-const router = createBrowserRouter(routes);
+function showStartupError(title: string, problems: string[], hint: string) {
+  ReactDOM.createRoot(root).render(
+    <React.StrictMode>
+      <StartupError title={title} problems={problems} hint={hint} />
+    </React.StrictMode>,
+  );
+}
 
-ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    {/* The design draws every icon with a 2.75 stroke (Lucide's default is 2). */}
-    <LucideProvider strokeWidth={2.75}>
-      <App session={session} router={router} />
-    </LucideProvider>
-  </React.StrictMode>,
-);
+const configProblem = apiUrlProblem(import.meta.env.VITE_API_URL);
+if (configProblem) {
+  showStartupError(
+    'The app is not set up',
+    [configProblem],
+    'In development copy .env.example to .env and restart npm run dev. In Docker pass the value as a build argument (--build-arg) and build the image again: VITE_ values are fixed into the page when it is built, not read when it starts.',
+  );
+} else {
+  // The app is loaded on demand: its API client refuses to exist without a valid address.
+  import('@/app/start')
+    .then(({ start }) => {
+      start(root);
+    })
+    .catch(() => {
+      showStartupError(
+        'The app could not be loaded',
+        ['Part of the app did not arrive.'],
+        'Check your connection and reload the page. If it keeps happening, the app may just have been updated: a reload fetches the new version.',
+      );
+    });
+}

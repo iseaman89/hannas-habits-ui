@@ -1,12 +1,14 @@
+import { apiUrlProblem } from './apiUrl';
+
 const configured = import.meta.env.VITE_API_URL;
 
-// Fail at start-up with a clear message instead of sending every request to the wrong place.
+// The start-up check in main.tsx shows this problem on a page of its own before this file is
+// ever loaded; the throw is the second lock for anything that imports the client regardless.
 // (VITE_* values are inlined at build time; in Docker they are build arguments.)
-if (!configured) {
-  throw new Error(
-    'VITE_API_URL is not set. Copy .env.example to .env (the backend URL including /api).',
-  );
+const problem = apiUrlProblem(configured);
+if (problem) {
+  throw new Error(`${problem} Copy .env.example to .env.`);
 }
 
 /** Backend base URL including the `/api` prefix, without a trailing slash. */
-export const API_BASE_URL = configured.replace(/\/+$/, '');
+export const API_BASE_URL = configured.trim().replace(/\/+$/, '');
