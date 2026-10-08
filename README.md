@@ -39,6 +39,15 @@ npm run dev
 App will be running at:  
 👉 `http://localhost:5173`
 
+#### Scripts
+
+| Script | What it does |
+|---|---|
+| `npm run dev` / `npm run build` | Dev server / type check + production build |
+| `npm run typecheck` / `npm run lint` / `npm run format:check` | TypeScript, ESLint, Prettier |
+| `npm run test` | Unit and component tests (Vitest + Testing Library) |
+| `npm run api:types -- <openapi.json or URL>` | Regenerate `src/shared/api/schema.d.ts` from the backend's OpenAPI document |
+
 ---
 
 ## ⚙️ API Configuration
