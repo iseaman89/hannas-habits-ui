@@ -8,6 +8,8 @@ export interface AuthApi {
   /** Call with the server's answer after a successful login, registration or Google sign-in. */
   signIn: (result: AuthResult) => void;
   signOut: () => Promise<void>;
+  /** For `status === 'unreachable'`: ask the server again whether the stored session still holds. */
+  reconnect: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthApi | null>(null);

@@ -30,13 +30,23 @@ function clock() {
   return { now: () => time, advance: (ms: number) => (time += ms) };
 }
 
-function memoryStore(initial: string | null = null): RefreshTokenStore {
+function memoryStore(initial: string | null = null) {
   let token = initial;
+  const removedElsewhere = new Set<() => void>();
   return {
     read: () => token,
-    write: (value) => (token = value),
+    write: (value: string) => (token = value),
     clear: () => (token = null),
-  };
+    onRemovedElsewhere(listener: () => void) {
+      removedElsewhere.add(listener);
+      return () => removedElsewhere.delete(listener);
+    },
+    /** Another tab logged out: the shared token is gone and this tab is told. */
+    removeInAnotherTab() {
+      token = null;
+      removedElsewhere.forEach((notify) => notify());
+    },
+  } satisfies RefreshTokenStore & { removeInAnotherTab: () => void };
 }
 
 /**
@@ -180,14 +190,123 @@ describe('restore (page load)', () => {
     expect(store.read()).toBeNull();
   });
 
-  it('keeps the token when the server cannot be reached, so the next page load tries again', async () => {
+  it('is "unreachable", not signed out, when the server cannot be reached - and keeps the token', async () => {
     const { session, server, store } = setup({ stored: 'r-kept' });
     server.failRefreshWith(noNetwork());
 
     await session.restore();
 
-    expect(session.getState()).toEqual({ status: 'anonymous', user: null, endedBy: null });
+    expect(session.getState()).toEqual({ status: 'unreachable', user: null, endedBy: null });
     expect(store.read()).toBe('r-kept');
+  });
+
+  it('is "unreachable" for a server that answers with an error, too', async () => {
+    const { session, server } = setup({ stored: 'r-kept' });
+    server.failRefreshWith(new ApiError(503, { title: null, detail: null, fieldErrors: {} }));
+
+    await session.restore();
+
+    expect(session.getState().status).toBe('unreachable');
+  });
+});
+
+describe('restore again after "unreachable"', () => {
+  async function unreachableSession() {
+    const setupResult = setup();
+    const { session, server, store } = setupResult;
+    store.write(server.issue().tokens.refreshToken);
+    server.failRefreshWith(noNetwork());
+    await session.restore();
+    expect(session.getState().status).toBe('unreachable');
+    return setupResult;
+  }
+
+  it('signs the person in once the server answers', async () => {
+    const { session, server } = await unreachableSession();
+    server.failRefreshWith(null);
+
+    await session.restore();
+
+    expect(session.getState()).toMatchObject({ status: 'authenticated', user });
+  });
+
+  it('stays "unreachable" while the server is still away, and does not tell anyone twice', async () => {
+    const { session } = await unreachableSession();
+    let notified = 0;
+    session.subscribe(() => notified++);
+
+    await session.restore();
+    await session.restore();
+
+    expect(session.getState().status).toBe('unreachable');
+    expect(notified).toBe(0);
+  });
+
+  it('ends the session as "expired" when the server now says the token is no good', async () => {
+    const { session, server, store } = await unreachableSession();
+    server.failRefreshWith(rejected(401));
+
+    await session.restore();
+
+    expect(session.getState()).toEqual({ status: 'anonymous', user: null, endedBy: 'expired' });
+    expect(store.read()).toBeNull();
+  });
+
+  it('is anonymous when the token has gone meanwhile (the person logged out in another tab)', async () => {
+    const { session, store } = await unreachableSession();
+    store.clear();
+
+    await session.restore();
+
+    expect(session.getState()).toEqual({ status: 'anonymous', user: null, endedBy: null });
+  });
+
+  it('does not run twice at once: a second call joins the one under way', async () => {
+    const { session, server } = await unreachableSession();
+    server.failRefreshWith(null);
+    const callsBefore = server.refreshCalls.length;
+    const release = server.holdRefreshes();
+
+    const first = session.restore();
+    const second = session.restore();
+    release();
+    await Promise.all([first, second]);
+
+    expect(server.refreshCalls.length - callsBefore).toBe(1);
+    expect(session.getState().status).toBe('authenticated');
+  });
+});
+
+describe('a log-out in another tab', () => {
+  it('ends this tab too, quietly: it is a log-out, not an expiry', () => {
+    const { session, store } = setup({ startSignedIn: true });
+
+    store.removeInAnotherTab();
+
+    expect(session.getState()).toEqual({ status: 'anonymous', user: null, endedBy: 'signed-out' });
+    expect(session.getAccessToken()).toBeNull();
+  });
+
+  it('ends a tab that was waiting for the server as well', async () => {
+    const { session, server, store } = setup({ stored: 'r-kept' });
+    server.failRefreshWith(noNetwork());
+    await session.restore();
+
+    store.removeInAnotherTab();
+
+    expect(session.getState()).toEqual({ status: 'anonymous', user: null, endedBy: 'signed-out' });
+  });
+
+  it('changes nothing for a tab that is signed out already', async () => {
+    const { session, store } = setup();
+    await session.restore();
+    let notified = 0;
+    session.subscribe(() => notified++);
+
+    store.removeInAnotherTab();
+
+    expect(session.getState()).toEqual({ status: 'anonymous', user: null, endedBy: null });
+    expect(notified).toBe(0);
   });
 });
 

@@ -73,3 +73,60 @@ describe('refresh token store', () => {
     expect(store.read()).toBeNull();
   });
 });
+
+describe('a token removed in another tab', () => {
+  // jsdom has a real localStorage, so the event can carry a real `storageArea`; the store is
+  // given a window-like object of its own to listen on, so nothing leaks between tests.
+  function setup() {
+    const area = window.localStorage;
+    const target = new EventTarget();
+    const store = createRefreshTokenStore(area, target);
+    const told: string[] = [];
+    const stop = store.onRemovedElsewhere?.(() => told.push('removed'));
+    const fire = (init: StorageEventInit) =>
+      target.dispatchEvent(new StorageEvent('storage', { storageArea: area, ...init }));
+    return { store, told, stop, fire };
+  }
+
+  it('tells the listener when another tab removes the token', () => {
+    const { told, fire } = setup();
+
+    fire({ key: REFRESH_TOKEN_KEY, oldValue: 'r1', newValue: null });
+
+    expect(told).toEqual(['removed']);
+  });
+
+  it('tells it when another tab clears the whole storage', () => {
+    const { told, fire } = setup();
+
+    fire({ key: null });
+
+    expect(told).toEqual(['removed']);
+  });
+
+  it('stays quiet when another tab only replaced the token (a refresh) or touched another key', () => {
+    const { told, fire } = setup();
+
+    fire({ key: REFRESH_TOKEN_KEY, oldValue: 'r1', newValue: 'r2' });
+    fire({ key: 'hh-theme', oldValue: 'light', newValue: null });
+
+    expect(told).toEqual([]);
+  });
+
+  it('ignores another storage area (sessionStorage)', () => {
+    const { told, fire } = setup();
+
+    fire({ key: REFRESH_TOKEN_KEY, newValue: null, storageArea: window.sessionStorage });
+
+    expect(told).toEqual([]);
+  });
+
+  it('stops listening when asked to', () => {
+    const { told, fire, stop } = setup();
+
+    stop?.();
+    fire({ key: REFRESH_TOKEN_KEY, newValue: null });
+
+    expect(told).toEqual([]);
+  });
+});

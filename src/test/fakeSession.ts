@@ -10,6 +10,7 @@ export const testUser: SessionUser = {
 export const signedIn: SessionState = { status: 'authenticated', user: testUser, endedBy: null };
 export const signedOut: SessionState = { status: 'anonymous', user: null, endedBy: null };
 export const restoring: SessionState = { status: 'restoring', user: null, endedBy: null };
+export const unreachable: SessionState = { status: 'unreachable', user: null, endedBy: null };
 
 /**
  * A session the test steers by hand: `set` changes the state and tells the listeners, like the
@@ -18,6 +19,7 @@ export const restoring: SessionState = { status: 'restoring', user: null, endedB
 export function fakeSession(initial: SessionState = signedOut) {
   let state = initial;
   const listeners = new Set<() => void>();
+  let restoreGate: Promise<void> | null = null;
 
   const fake = {
     restoreCalls: 0,
@@ -41,7 +43,13 @@ export function fakeSession(initial: SessionState = signedOut) {
     },
     restore() {
       fake.restoreCalls++;
-      return Promise.resolve();
+      return restoreGate ?? Promise.resolve();
+    },
+    /** Makes `restore()` answer only after the returned `release()`. */
+    holdRestore() {
+      let release!: () => void;
+      restoreGate = new Promise<void>((resolve) => (release = resolve));
+      return release;
     },
     end() {
       fake.endCalls++;

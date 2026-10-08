@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Spinner } from '@/shared/ui';
 import { useAuth } from './auth-context';
+import { ServerUnreachable } from './ServerUnreachable';
 
 function PageSpinner() {
   return (
@@ -18,13 +19,15 @@ export interface LoginLocationState {
 /**
  * Layout route for everything behind the login: shows the nested routes to a signed-in person,
  * sends everybody else to `/login` (remembering where they wanted to go). While the stored
- * session is still being restored on page load it shows a spinner, not the login form.
+ * session is still being restored on page load it shows a spinner, not the login form; if the
+ * server could not be asked, a page that says so (see `ServerUnreachable`).
  */
 export function RequireAuth() {
   const { status } = useAuth();
   const location = useLocation();
 
   if (status === 'restoring') return <PageSpinner />;
+  if (status === 'unreachable') return <ServerUnreachable />;
   if (status === 'anonymous') {
     const state: LoginLocationState = { from: location.pathname + location.search };
     return <Navigate to="/login" replace state={state} />;
@@ -53,6 +56,7 @@ export function PublicOnly() {
   const location = useLocation();
 
   if (status === 'restoring') return <PageSpinner />;
+  if (status === 'unreachable') return <ServerUnreachable />;
   if (status === 'authenticated') {
     const state = location.state as LoginLocationState | null;
     return <Navigate to={returnPath(state?.from)} replace />;

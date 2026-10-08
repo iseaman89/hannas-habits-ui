@@ -5,7 +5,11 @@ import { singleFlight } from '@/shared/lib/singleFlight';
 export type AuthResult = Schema<'AuthResult'>;
 export type SessionUser = AuthResult['user'];
 
-export type SessionStatus = 'restoring' | 'authenticated' | 'anonymous';
+/**
+ * `unreachable`: a session is stored but the server could not be asked whether it still holds
+ * (no network, server down). Not the same as `anonymous`: the person is probably still signed in.
+ */
+export type SessionStatus = 'restoring' | 'authenticated' | 'anonymous' | 'unreachable';
 /** `signed-out`: the person logged out. `expired`: the server no longer accepts the session. */
 export type SessionEnd = 'signed-out' | 'expired';
 
@@ -21,6 +25,12 @@ export interface RefreshTokenStore {
   read(): string | null;
   write(token: string): void;
   clear(): void;
+  /**
+   * Tells when *another tab* removed the token (it logged out): this tab has no session left
+   * either. Returns the function that stops listening. A store that cannot hear other tabs (e.g.
+   * memory only) leaves it out.
+   */
+  onRemovedElsewhere?(listener: () => void): () => void;
 }
 
 /** The two calls the session makes to the server; the HTTP details are not its business. */
@@ -45,7 +55,10 @@ export interface Session extends ClientAuth {
   subscribe: (listener: () => void) => () => void;
   /** Adopts the answer of a successful login / register / Google sign-in. */
   start: (result: AuthResult) => void;
-  /** On page load: if a refresh token is stored, trade it for a session. Safe to call twice. */
+  /**
+   * On page load: if a refresh token is stored, trade it for a session. Safe to call twice.
+   * Called again while the status is `unreachable`, it tries the server once more.
+   */
   restore: () => Promise<void>;
   /** Logs out: the person is out at once, then the server is told (best effort). */
   end: () => Promise<void>;
@@ -132,6 +145,12 @@ export function createSession({
 
   const refresh = singleFlight(() => exclusive(refreshNow));
 
+  // Another tab logged out: the shared token is gone, so is this tab's session. (Not "expired":
+  // nothing went wrong, the person left on purpose.)
+  store.onRemovedElsewhere?.(() => {
+    if (state.status === 'authenticated' || state.status === 'unreachable') drop('signed-out');
+  });
+
   let restoring: Promise<void> | null = null;
 
   return {
@@ -147,7 +166,10 @@ export function createSession({
     start: adopt,
 
     restore() {
-      restoring ??= (async () => {
+      // One run per page load - except after a failure that said nothing about the token.
+      if (restoring && state.status !== 'unreachable') return restoring;
+
+      restoring = (async () => {
         if (!store.read()) {
           setState({ status: 'anonymous', user: null, endedBy: null });
           return;
@@ -156,9 +178,11 @@ export function createSession({
           await refresh();
         } catch {
           // A rejected token already ended the session (and kept the reason). Any other failure
-          // (no network, server down): the stored token stays, so the next page load tries again.
+          // (no network, server down) says nothing about the token: it stays, and the person is
+          // told the server cannot be reached instead of being shown a login form they do not
+          // need. They (or the browser coming back online) can try again with `restore()`.
           if (state.status === 'restoring') {
-            setState({ status: 'anonymous', user: null, endedBy: null });
+            setState({ status: 'unreachable', user: null, endedBy: null });
           }
         }
       })();

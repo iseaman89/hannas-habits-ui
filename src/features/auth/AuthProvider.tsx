@@ -33,6 +33,16 @@ export function AuthProvider({ session, children }: AuthProviderProps) {
     return () => queryClient.clear();
   }, [userId, queryClient]);
 
+  // The browser says the network is back: a screen that is waiting for the server tries again
+  // by itself instead of making the person press a button.
+  const unreachable = state.status === 'unreachable';
+  useEffect(() => {
+    if (!unreachable) return;
+    const retry = () => void session.restore();
+    window.addEventListener('online', retry);
+    return () => window.removeEventListener('online', retry);
+  }, [unreachable, session]);
+
   useEffect(() => {
     if (state.endedBy === 'expired') toast.info('Your session has expired. Please sign in again.');
   }, [state.endedBy, toast]);
@@ -43,6 +53,7 @@ export function AuthProvider({ session, children }: AuthProviderProps) {
       user: state.user,
       signIn: session.start,
       signOut: session.end,
+      reconnect: session.restore,
     }),
     [state.status, state.user, session],
   );
