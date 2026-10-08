@@ -1,6 +1,6 @@
 import type { RouteObject } from 'react-router-dom';
 import { LoginPage, PublicOnly, RequireAuth } from '@/features/auth';
-import { CalendarPage } from '@/features/calendar/CalendarPage';
+import { CalendarPage } from '@/features/calendar';
 import { DiaryPage, TodayRedirect } from '@/features/diary';
 import { HabitsPage } from '@/features/habits';
 import { ResolutionsPage } from '@/features/resolutions/ResolutionsPage';

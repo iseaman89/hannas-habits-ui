@@ -78,7 +78,10 @@ describe('the app skeleton', () => {
 
     await userEvent.click(screen.getByRole('link', { name: 'Calendar' }));
     expect(router.state.location.pathname).toBe('/calendar');
-    expect(screen.getByRole('heading', { name: 'Calendar' })).toBeInTheDocument();
+    // The calendar's title is the year it shows.
+    expect(
+      screen.getByRole('heading', { level: 1, name: String(new Date().getFullYear()) }),
+    ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('link', { name: 'Resolutions' }));
     expect(router.state.location.pathname).toBe('/resolutions');
