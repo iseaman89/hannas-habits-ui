@@ -13,7 +13,7 @@ interface DialogProps {
 /**
  * A modal dialog on the platform's <dialog> element: the browser traps and restores focus,
  * makes the page behind inert and puts the dialog above everything else. That is the part a
- * home-made modal gets wrong; react-modal (used by the old UI) re-implements it.
+ * home-made modal gets wrong (the old UI's react-modal re-implemented it).
  *
  * Controlled: Escape and a backdrop click only *ask* via `onClose`. The content is mounted only
  * while open, so a form inside starts fresh every time.
