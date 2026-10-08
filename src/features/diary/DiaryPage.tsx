@@ -1,12 +1,13 @@
 import { Navigate, useParams } from 'react-router-dom';
 import { errorMessage } from '@/shared/api';
 import { parseApiDate, toApiDate } from '@/shared/lib/dates';
-import { Button, FormMessage, Spinner } from '@/shared/ui';
+import { Button, FormMessage } from '@/shared/ui';
 import type { HabitsGateway } from '@/features/habits';
 import { DiaryEditor } from './DiaryEditor';
 import { diaryGateway, type DiaryGateway } from './diaryGateway';
 import { useDiaryDay } from './diaryQueries';
 import { DiaryHeader } from './DiaryHeader';
+import { DiarySkeleton } from './DiarySkeleton';
 
 interface DiaryPageProps {
   gateway?: DiaryGateway;
@@ -65,9 +66,7 @@ function DiaryDay({ date, day, gateway, habitsGateway }: DiaryDayProps) {
             </Button>
           </div>
         ) : (
-          <div className="grid place-items-center py-12 text-2xl text-accent-700">
-            <Spinner label="Loading the diary" />
-          </div>
+          <DiarySkeleton />
         )}
       </div>
     </>

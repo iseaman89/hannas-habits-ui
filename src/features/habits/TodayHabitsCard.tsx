@@ -2,7 +2,7 @@ import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { errorMessage } from '@/shared/api';
 import { parseApiDate, toApiDate } from '@/shared/lib/dates';
-import { Button, Card, Checkbox, FormMessage, Spinner } from '@/shared/ui';
+import { Button, Card, Checkbox, FormMessage, Skeleton, SkeletonGroup } from '@/shared/ui';
 import { cellState, isToggleable, type CellState } from './cells';
 import { useMarkHabit } from './habitMutations';
 import { useHabitOverview } from './habitQueries';
@@ -56,9 +56,11 @@ export function TodayHabitsCard({ date, gateway = habitsGateway }: TodayHabitsCa
     if (planned === undefined) {
       if (!overview.isError) {
         return (
-          <div className="grid place-items-center py-4 text-2xl text-accent-2-700">
-            <Spinner label="Loading habits" />
-          </div>
+          <SkeletonGroup label="Loading habits" className="flex flex-col gap-3">
+            {[0, 1, 2].map((row) => (
+              <Skeleton key={row} className="h-8" />
+            ))}
+          </SkeletonGroup>
         );
       }
       return (

@@ -3,7 +3,15 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { habitsGateway, type HabitsGateway } from '@/features/habits';
 import { errorMessage } from '@/shared/api';
-import { Button, Card, FormMessage, IconButton, PageHeader, Spinner } from '@/shared/ui';
+import {
+  Button,
+  Card,
+  FormMessage,
+  IconButton,
+  PageHeader,
+  Skeleton,
+  SkeletonGroup,
+} from '@/shared/ui';
 import { AddResolutionRow } from './AddResolutionRow';
 import { DeleteResolutionDialog } from './DeleteResolutionDialog';
 import { EditResolutionDialog } from './EditResolutionDialog';
@@ -62,9 +70,11 @@ export function ResolutionsPage({
     if (list === undefined) {
       if (!resolutions.isError) {
         return (
-          <div className="grid place-items-center py-12 text-2xl text-accent-700">
-            <Spinner label="Loading resolutions" />
-          </div>
+          <SkeletonGroup label="Loading resolutions" className="flex flex-col gap-4">
+            {[0, 1, 2].map((row) => (
+              <Skeleton key={row} className="h-14 rounded-full" />
+            ))}
+          </SkeletonGroup>
         );
       }
       return (

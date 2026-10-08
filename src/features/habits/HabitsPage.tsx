@@ -4,7 +4,15 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { errorMessage } from '@/shared/api';
 import { toApiDate } from '@/shared/lib/dates';
-import { Button, Card, FormMessage, IconButton, PageHeader, Spinner } from '@/shared/ui';
+import {
+  Button,
+  Card,
+  FormMessage,
+  IconButton,
+  PageHeader,
+  Skeleton,
+  SkeletonGroup,
+} from '@/shared/ui';
 import { CreateHabitDialog } from './CreateHabitDialog';
 import { DeleteHabitDialog } from './DeleteHabitDialog';
 import { EditHabitDialog } from './EditHabitDialog';
@@ -51,9 +59,11 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
     if (habits === undefined) {
       if (!overview.isError) {
         return (
-          <div className="grid place-items-center py-12 text-2xl text-accent-700">
-            <Spinner label="Loading habits" />
-          </div>
+          <SkeletonGroup label="Loading habits" className="flex flex-col gap-4">
+            {[0, 1, 2, 3].map((row) => (
+              <Skeleton key={row} className="h-12" />
+            ))}
+          </SkeletonGroup>
         );
       }
       return (

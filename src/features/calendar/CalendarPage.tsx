@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { diaryGateway, useDiaryDays, type DiaryGateway } from '@/features/diary';
 import { errorMessage } from '@/shared/api';
 import { toApiDate } from '@/shared/lib/dates';
-import { Button, FormMessage, IconButton, PageHeader, Spinner } from '@/shared/ui';
+import { Button, FormMessage, IconButton, PageHeader, Skeleton, SkeletonGroup } from '@/shared/ui';
 import type { Mood } from './dayState';
 import { MonthCard } from './MonthCard';
 import { MoodLegend } from './MoodLegend';
@@ -40,9 +40,14 @@ export function CalendarPage({ gateway = diaryGateway }: { gateway?: DiaryGatewa
     if (days.data === undefined) {
       if (!days.isError) {
         return (
-          <div className="grid place-items-center py-12 text-2xl text-accent-700">
-            <Spinner label="Loading the calendar" />
-          </div>
+          <SkeletonGroup
+            label="Loading the calendar"
+            className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-6"
+          >
+            {Array.from({ length: 12 }, (_, month) => (
+              <Skeleton key={month} className="h-56 rounded-card" />
+            ))}
+          </SkeletonGroup>
         );
       }
       return (

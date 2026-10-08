@@ -297,6 +297,20 @@ describe('autosave', () => {
     expect(diary.dayOf('2026-10-07')).toBeUndefined();
   });
 
+  it('shows the shape of the day, announced once, while the day is on its way', async () => {
+    const diary = fakeDiary();
+    const release = diary.hold();
+    renderPage(diary);
+
+    expect(screen.getByText('Loading the diary').parentElement).toHaveAttribute('role', 'status');
+    // The header is already there: the person knows which day is coming.
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Wednesday, 7 October');
+
+    release();
+    expect(await highlight()).toBeInTheDocument();
+    expect(screen.queryByText('Loading the diary')).not.toBeInTheDocument();
+  });
+
   it('never has two writes under way at once, and the last one carries everything typed', async () => {
     const user = userEvent.setup();
     const diary = fakeDiary();

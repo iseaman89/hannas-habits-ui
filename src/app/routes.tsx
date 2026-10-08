@@ -6,6 +6,7 @@ import { HabitsPage } from '@/features/habits';
 import { ResolutionsPage } from '@/features/resolutions';
 import { AppShell } from './AppShell';
 import { NotFoundPage } from './NotFoundPage';
+import { RouteError } from './RouteError';
 
 /**
  * The route table (DESIGN.md §3). Two layout routes carry the rules: `PublicOnly` for the login
@@ -15,7 +16,7 @@ import { NotFoundPage } from './NotFoundPage';
 export const routes: RouteObject[] = [
   {
     element: <PublicOnly />,
-    children: [{ path: '/login', element: <LoginPage /> }],
+    children: [{ path: '/login', element: <LoginPage />, errorElement: <RouteError /> }],
   },
   {
     element: <RequireAuth />,
@@ -23,12 +24,19 @@ export const routes: RouteObject[] = [
       {
         element: <AppShell />,
         children: [
-          { path: '/', element: <TodayRedirect /> },
-          { path: '/diary/:date', element: <DiaryPage /> },
-          { path: '/habits', element: <HabitsPage /> },
-          { path: '/calendar', element: <CalendarPage /> },
-          { path: '/resolutions', element: <ResolutionsPage /> },
-          { path: '*', element: <NotFoundPage /> },
+          {
+            // A pathless route whose only job is to hold the error page: a screen that crashes
+            // is replaced by it *inside* the shell, instead of taking the sidebar down with it.
+            errorElement: <RouteError />,
+            children: [
+              { path: '/', element: <TodayRedirect /> },
+              { path: '/diary/:date', element: <DiaryPage /> },
+              { path: '/habits', element: <HabitsPage /> },
+              { path: '/calendar', element: <CalendarPage /> },
+              { path: '/resolutions', element: <ResolutionsPage /> },
+              { path: '*', element: <NotFoundPage /> },
+            ],
+          },
         ],
       },
     ],

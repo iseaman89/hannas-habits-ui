@@ -65,6 +65,18 @@ afterEach(() => {
 });
 
 describe('the habits of a day', () => {
+  it('announces the loading once, and goes when the habits are there', async () => {
+    const fake = fakeHabits([stretch]);
+    const release = fake.hold();
+    renderCard(fake);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading habits');
+
+    release();
+    await screen.findByRole('checkbox', { name: 'Stretch' });
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('asks for just that day, with the client’s today for the streak', async () => {
     const fake = fakeHabits([stretch]);
     renderCard(fake, '2026-10-05');

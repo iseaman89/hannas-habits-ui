@@ -14,6 +14,7 @@ export { ProgressDonut } from './ProgressDonut';
 export { Select } from './Select';
 export type { SelectProps } from './Select';
 export { Slider } from './Slider';
+export { Skeleton, SkeletonGroup } from './Skeleton';
 export { Spinner } from './Spinner';
 export { Tag } from './Tag';
 export type { TagTone } from './Tag';
