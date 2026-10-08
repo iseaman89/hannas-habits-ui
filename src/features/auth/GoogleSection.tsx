@@ -1,6 +1,8 @@
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
+import { useElementWidth } from '@/shared/lib/useElementWidth';
 import { useTheme } from '@/shared/ui';
 import { GOOGLE_CLIENT_ID } from './config';
+import { googleButtonWidth } from './googleButtonWidth';
 
 export interface GoogleSectionProps {
   /** Google's answer: the ID token that the backend verifies. */
@@ -12,9 +14,6 @@ export interface GoogleSectionProps {
   /** The app's configured client id; passed in only by tests. */
   clientId?: string | null;
 }
-
-// Google draws the button in an iframe and takes its width in pixels (at most 400).
-const BUTTON_WIDTH = 320;
 
 /**
  * The divider and "Continue with Google". Uses Google's own button (the ID-token flow, which is
@@ -31,6 +30,7 @@ export function GoogleSection({
   clientId = GOOGLE_CLIENT_ID,
 }: GoogleSectionProps) {
   const { theme } = useTheme();
+  const [slot, slotWidth] = useElementWidth<HTMLDivElement>();
   if (!clientId) return null;
 
   return (
@@ -41,13 +41,13 @@ export function GoogleSection({
           or
           <span className="h-px flex-1 bg-divider" />
         </div>
-        <div className="flex justify-center">
+        <div ref={slot} className="flex justify-center">
           <GoogleLogin
             text="continue_with"
             shape="pill"
             size="large"
             theme={theme === 'dark' ? 'filled_black' : 'outline'}
-            width={BUTTON_WIDTH}
+            width={googleButtonWidth(slotWidth)}
             onSuccess={({ credential }) => (credential ? onCredential(credential) : onFailure())}
             onError={onFailure}
           />

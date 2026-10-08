@@ -51,4 +51,12 @@ describe('Field', () => {
 
     expect(screen.getByLabelText('First').id).not.toBe(screen.getByLabelText('Second').id);
   });
+
+  it('keeps the line breaks of an error, so several rules stay one rule per line', () => {
+    const input = renderField({ error: 'Needs a digit.\nNeeds a capital.' });
+
+    const error = document.getElementById(input.getAttribute('aria-describedby') ?? '');
+    expect(error?.textContent).toBe('Needs a digit.\nNeeds a capital.');
+    expect(error).toHaveClass('whitespace-pre-line');
+  });
 });

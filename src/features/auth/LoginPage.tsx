@@ -1,5 +1,6 @@
 import { useState, type ComponentType } from 'react';
 import { errorMessage } from '@/shared/api';
+import { useDocumentTitle } from '@/shared/lib/documentTitle';
 import { Button, Card, FormMessage, Tag, ThemeSwitch, useTheme } from '@/shared/ui';
 import { authGateway, type AuthGateway } from './authGateway';
 import { GoogleSection, type GoogleSectionProps } from './GoogleSection';
@@ -29,6 +30,7 @@ export function LoginPage({ gateway = authGateway, GoogleButton = GoogleSection 
   const { theme, setTheme } = useTheme();
   const authentication = useAuthentication(gateway);
   const { busy } = authentication;
+  useDocumentTitle(mode === 'login' ? 'Log in' : 'Create account');
 
   function switchMode() {
     setGoogleMessage(null);

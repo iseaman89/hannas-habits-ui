@@ -46,7 +46,8 @@ describe('applyServerError', () => {
     expect(formMessage).toBeNull();
     expect(calls).toEqual([
       { field: 'email', message: 'Not an email.', shouldFocus: true },
-      { field: 'password', message: 'Too short. Needs a digit.', shouldFocus: false },
+      // One line per rule (the field keeps the line breaks), not four sentences run together.
+      { field: 'password', message: 'Too short.\nNeeds a digit.', shouldFocus: false },
     ]);
   });
 

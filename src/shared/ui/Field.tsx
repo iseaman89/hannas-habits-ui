@@ -39,7 +39,7 @@ export function Field({ label, hint, error, className, children }: FieldProps) {
       </label>
       {children({ id, 'aria-describedby': describedBy, 'aria-invalid': error ? true : undefined })}
       {error && (
-        <p id={errorId} className="px-3 text-sm font-semibold text-accent-700">
+        <p id={errorId} className="whitespace-pre-line px-3 text-sm font-semibold text-accent-700">
           {error}
         </p>
       )}

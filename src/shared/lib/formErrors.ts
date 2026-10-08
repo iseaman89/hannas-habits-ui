@@ -27,7 +27,12 @@ export function applyServerError<T extends FieldValues>(
       allPinned = false;
       continue;
     }
-    setError(field, { type: 'server', message: messages.join(' ') }, { shouldFocus: pinned === 0 });
+    // One line per complaint (the password policy comes as several rules; `Field` keeps the breaks).
+    setError(
+      field,
+      { type: 'server', message: messages.join('\n') },
+      { shouldFocus: pinned === 0 },
+    );
     pinned++;
   }
 

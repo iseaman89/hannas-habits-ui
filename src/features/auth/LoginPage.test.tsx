@@ -290,6 +290,15 @@ describe('LoginPage: create an account', () => {
     expect(screen.queryByLabelText('Your name')).not.toBeInTheDocument();
   });
 
+  it('names the mode in the browser tab', async () => {
+    const { user } = setup();
+    expect(document.title).toBe("Log in · Hanna's Habits");
+
+    await openRegister(user);
+
+    expect(document.title).toBe("Create account · Hanna's Habits");
+  });
+
   it('checks the shape of the email, which a login does not', async () => {
     const { user, calls } = setup();
     await openRegister(user);
@@ -348,11 +357,14 @@ describe('LoginPage: create an account', () => {
     await user.type(passwordField(), 'secret');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(
-      await screen.findByText(
-        'Passwords must have at least one digit (0-9). Passwords must have at least one uppercase (A-Z).',
-      ),
-    ).toBeInTheDocument();
+    // One rule per line, not four sentences in a row (Testing Library's text queries and
+    // jest-dom fold line breaks into spaces, so the raw text is compared here).
+    const rules = await screen.findByText(
+      'Passwords must have at least one digit (0-9). Passwords must have at least one uppercase (A-Z).',
+    );
+    expect(rules.textContent).toBe(
+      'Passwords must have at least one digit (0-9).\nPasswords must have at least one uppercase (A-Z).',
+    );
     expect(passwordField()).toBeInvalid();
     expect(passwordField()).toHaveFocus();
   });
