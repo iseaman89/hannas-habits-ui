@@ -6,6 +6,25 @@ import { defineConfig } from 'vitest/config';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      output: {
+        // The libraries change far less often than the app. In their own files (named by a hash
+        // of their content, cached "immutable" by nginx) a deploy that only touches the app
+        // makes the browser fetch the app's chunk again and not the framework with it.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (
+            /node_modules\/(react|react-dom|react-router|react-router-dom|scheduler)\//.test(id)
+          ) {
+            return 'react';
+          }
+          if (/node_modules\/(zod|react-hook-form|@hookform)\//.test(id)) return 'forms';
+          return 'vendor';
+        },
+      },
+    },
+  },
   resolve: {
     // Keep in sync with `paths` in tsconfig.app.json.
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
