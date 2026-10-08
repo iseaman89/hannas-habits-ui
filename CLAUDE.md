@@ -53,20 +53,49 @@ Use `components['schemas'][…]` for request/response shapes; never hand-copy a 
 
 ## State of the code
 
-The code in `src/` is mostly the **old** UI: JSX, three separate axios services with hard-coded old routes, auth data in `localStorage` keys, router `state` hacks. It is replaced step by step (F2 design system, F3 skeleton + one API client, F4–F8 features). `npm run lint` is red on pre-existing findings of that old code (unused variables, missing hook deps); do not add new ones, and do not fix them one by one in code that a later step rewrites.
+**App skeleton (since F3):** `src/app`, `src/features/*` and `src/shared/*` are the app. Everything else under `src/` — `components/`, `containers/`, `pages/`, `services/`, `legacy.css`, most of `assets/icons` — is the **old UI**: JSX, hard-coded old routes, `localStorage` auth keys. It is **no longer routed or imported by the app** and stays only as reference for the step that replaces it (that step deletes it: F4 auth screens + `services/AuthService.js`, F5 habits, F6 diary, F7 calendar, F8 resolutions). Some of those files import modules F3 already removed (`AuthContext`, `useTheme`), so they do not run any more — do not repair them. `npm run lint` is red on pre-existing findings of the old code (28 now, all in `.js`/`.jsx`); do not add new ones and do not fix them one by one in code that a later step deletes.
 
-**TypeScript (since F1):** `tsconfig.app.json` is `strict` (+ `noUncheckedIndexedAccess`, `verbatimModuleSyntax`) with `allowJs` on and `checkJs` off — the old JS is imported but not type-checked, **everything new is written as `.ts`/`.tsx`** and the JS file it replaces is deleted. Already TypeScript: `main.tsx`, `App.tsx`, `vite.config.ts`, `src/shared/lib/*`, `src/shared/ui/*`. Imports use the `@/` alias for `src/` (declared in `tsconfig.app.json` *and* `vite.config.ts` — keep both in sync). Tests sit next to the code as `*.test.ts(x)`; Vitest does not expose globals, import `describe/it/expect` from `vitest`. New code must pass `npm run typecheck`, `npm run lint` (TS part clean) and `npm run format:check`.
+**TypeScript (since F1):** `tsconfig.app.json` is `strict` (+ `noUncheckedIndexedAccess`, `verbatimModuleSyntax`) with `allowJs` on and `checkJs` off — the old JS is imported but not type-checked, **everything new is written as `.ts`/`.tsx`** and the JS file it replaces is deleted. Already TypeScript: `main.tsx`, `vite.config.ts`, `src/app/*`, `src/features/auth`, `src/shared/*`. Imports use the `@/` alias for `src/` (declared in `tsconfig.app.json` *and* `vite.config.ts` — keep both in sync). Tests sit next to the code as `*.test.ts(x)`; Vitest does not expose globals, import `describe/it/expect` from `vitest`. New code must pass `npm run typecheck`, `npm run lint` (TS part clean) and `npm run format:check`.
 
-**Design system (since F2):** `src/shared/ui/theme.css` holds the tokens of `docs/DESIGN.md` in the backend repo (Tailwind 4 `@theme static`); `src/index.css` only imports Tailwind, the tokens and `src/legacy.css` (the old UI's styles — deleted with the last old screen; the old `useTheme` hook is bridged to the new theme module). Rules for new UI:
+**Design system (since F2):** `src/shared/ui/theme.css` holds the tokens of `docs/DESIGN.md` in the backend repo (Tailwind 4 `@theme static`); `src/index.css` only imports Tailwind, the tokens and `src/legacy.css` (the old UI's styles — deleted with the last old screen). Rules for new UI:
 - **Use the role/ramp tokens, never `dark:` and never hex values.** `bg-bg`, `bg-surface`, `text-text`, `bg-accent`, `bg-accent-200 text-accent-800`, `bg-accent-2-*` (sage), `bg-neutral-*`, `bg-mood-great|good|okay|low|rough` + `text-on-mood-*`, `bg-miss`, `border-divider`, `rounded-card`, `shadow-sm|md|lg`, `font-display` (Caprasimo), `text-page|dialog|card|kicker`. The dark ramps are the light ones mirrored, so one set of classes serves both themes. Spacing is 1.10× (`p-1` = 4.4 px).
-- Theme = `data-theme` on `<html>` via `src/shared/lib/theme.ts` (`getInitialTheme`/`applyTheme`/`storeTheme`; stored choice → system preference → light). The shared React context is F3.
-- Components in `@/shared/ui` (barrel): `Button`/`IconButton`, `Tag`, `Card`, `Field` + `Input`/`Textarea`, `Dialog` (native `<dialog>`, controlled), `Slider`, `ThemeSwitch`, `ProgressDonut`, `PageHeader`, `Spinner`, `ToastProvider` + `useToast`. Real `button`/`input` elements only, every icon-only control needs a `label`. Icons are Lucide (`LucideProvider` in `main.tsx` sets stroke 2.75). `cn()` joins class names (no tailwind-merge: pass `className` for layout only, not to override a component's own colours).
+- Theme = `data-theme` on `<html>` via `src/shared/lib/theme.ts` (`getInitialTheme`/`applyTheme`/`storeTheme`; stored choice → system preference → light). The shared React context is `ThemeProvider` / `useTheme()` (`@/shared/ui`); only a choice the person makes is stored.
+- Components in `@/shared/ui` (barrel): `Button`/`IconButton`, `Tag`, `Card`, `Field` + `Input`/`Textarea`, `Dialog` (native `<dialog>`, controlled), `Slider`, `ThemeSwitch`, `ProgressDonut`, `PageHeader`, `Spinner`, `ThemeProvider` + `useTheme`, `ToastProvider` + `useToast`. Real `button`/`input` elements only, every icon-only control needs a `label`. Icons are Lucide (`LucideProvider` in `main.tsx` sets stroke 2.75). `cn()` joins class names (no tailwind-merge: pass `className` for layout only, not to override a component's own colours).
 - `Field` passes its a11y props to the control as a render prop: `<Field label error>{(c) => <Input {...c} {...register('x')} />}</Field>`.
-- Tests: jsdom has no `<dialog>.showModal` (stubbed in `src/test/setup.ts`) and no `matchMedia` (inject it, see `systemTheme`).
+- Tests: jsdom has no `<dialog>.showModal` and no `matchMedia` (both stubbed in `src/test/setup.ts`; the `matchMedia` stand-in says "not dark" — inject your own where it matters, see `systemTheme`).
+
+## Structure (since F3)
+
+```
+src/app/                composition root: App, AppProviders, routes (the route table is data), AppShell, Sidebar, queryClient
+src/features/<name>/    one folder per feature: its screens, API calls and hooks; auth also holds the session
+src/shared/api/         the one API client (+ generated schema.d.ts)
+src/shared/lib/         pure helpers: dates, theme, cn, singleFlight, exclusive
+src/shared/ui/          design system and the theme/toast providers
+src/test/               setup, fakeServer (stand-in for the network), fakeSession
+```
+
+Dependencies point inwards: `app` → `features` → `shared`. `shared` never imports a feature (the API client asks for the token through the `ClientAuth` interface, which the auth feature implements — `src/features/auth/appSession.ts` plugs it in); a feature does not import another one's internals. Providers, outermost first: `ThemeProvider` → `QueryClientProvider` → `ToastProvider` → `AuthProvider` → router. A screen behind the login sits under `RequireAuth` + `AppShell` in `src/app/routes.tsx`; its placeholder (`*Page.tsx`) is replaced by the feature step.
+
+## Talking to the API (since F3)
+
+- `import { api } from '@/shared/api'` and call by the routes of the OpenAPI document: `await api.get('/api/habits/{id}', { path: { id } })`, `await api.put('/api/daily-diaries/{date}', { path: { date }, body })`. The route, the path/query parameters, the body and the answer are checked against `schema.d.ts` (`204` → `void`); a renamed route or changed DTO breaks `npm run typecheck`. DTO types: `Schema<'HabitOverviewDto'>`, never hand-copied. Dates in `path`/`query`/`body` are the `yyyy-MM-dd` strings (see below).
+- Every failure is an **`ApiError`** (`status`, `title`, `detail`, `fieldErrors` per field, `isNetworkError` for status 0). `errorMessage(error, fallback)` is the text for a person. A cancelled request stays a cancellation. Services/hooks do not catch and swallow; the component decides what to show.
+- Server data goes through **TanStack Query** (`useQuery` / `useMutation` in a hook next to the feature's API calls). Query keys start with the feature, then the parameters: `['habits', 'overview', { from, to }]`. A 4xx is not retried (`src/app/queryClient.ts`), writes never are. The cache is cleared when the person changes or leaves (`AuthProvider`).
+- The auth endpoints (`login`, `register`, `google`, `refresh`, `revoke`) use a **client without token logic** (`createHttpClient({ baseURL: API_BASE_URL })`, see `features/auth/sessionGateway.ts`; F4 adds the login calls there): a 401 from `login` means "wrong password" and must not start a refresh.
+- Tests: `fakeServer` + `createHttpClient({ adapter })` for code that talks to the API, `fakeSession()` for components that need a signed-in person; no mocking library. For forms use `ApiError.fieldErrors` → `setError`.
+
+## The session (`src/features/auth`, since F3)
+
+Plain TypeScript in `session.ts`, put into React by `AuthProvider` (`useAuth()` → `status`, `user`, `signIn(result)`, `signOut()`; `useUser()` behind the login). Access token in memory, refresh token in `localStorage['hh-refresh-token']` (memory fallback if storage is blocked). **Never call the refresh endpoint outside the session.** Rules it keeps, each with a test:
+- A refresh token works **exactly once**; a second use ends every session of the person. Parallel 401s share one refresh (`singleFlight`), and refreshes are serialised across tabs with a Web Lock (`crossTabExclusive`); inside the lock the newest stored token is read.
+- Only a 400/401 answer ends the session (`endedBy: 'expired'` → toast). No network does not: the person stays signed in.
+- After a reload `session.restore()` trades the stored refresh token for user + tokens (no `/me`). Log-out is local first, then `revoke` (which needs a valid access token — if it ran out, the tokens are traded first so the *current* refresh token is revoked).
+- After sign-in call `signIn(authResult)` with the server's answer; `RequireAuth` sends anybody else to `/login` with `state.from`.
 
 ## Conventions to keep
 
 - Dates are `yyyy-MM-dd` strings, never `toISOString()` (it is UTC and can be a day off): use `toApiDate` / `parseApiDate` from `@/shared/lib/dates`. Send the client's local today as `asOf` / `startDate`.
 - Forms (decided in F1): **React Hook Form + zod** (`@hookform/resolvers`) for new forms, installed in F4 where the first one is written; Formik + Yup stay only until the old forms are replaced and are then removed. Server validation errors arrive as `errors.<camelCase field>` and map onto the form fields with `setError`.
-- One shared axios client; the 401 → refresh → retry must be **single-flight** (a refresh token works exactly once; a second use revokes all sessions).
+- One shared axios client (`@/shared/api`); the 401 → refresh → retry is single-flight inside the session (see above).
 - Services throw; components decide what to show. No `console.*` left in committed code.
