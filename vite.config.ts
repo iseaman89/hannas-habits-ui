@@ -15,5 +15,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     restoreMocks: true,
+    // Required at start-up by shared/api/config.ts; no real server behind it.
+    env: { VITE_API_URL: 'http://api.test/api' },
   },
 });
