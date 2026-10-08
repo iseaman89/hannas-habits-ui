@@ -10,7 +10,9 @@ src/shared/api/schema.d.ts
 # would just bury the history. New code is TypeScript and gets formatted.
 src/**/*.js
 src/**/*.jsx
-src/**/*.css
+src/legacy.css
+src/App.css
+src/components/**/*.css
 src/assets
 
 # Not ours / not code.
