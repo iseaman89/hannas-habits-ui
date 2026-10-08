@@ -49,7 +49,7 @@ curl -ks https://localhost:7054/swagger/v1/swagger.json -o /tmp/openapi.json && 
 npm run api:types -- http://localhost:8080/swagger/v1/swagger.json   # docker compose (plain http), no curl needed
 ```
 
-Use `components['schemas'][…]` for request/response shapes; never hand-copy a DTO.
+Use `components['schemas'][…]` for request/response shapes; never hand-copy a DTO. Since B11 the document is complete: every route has its 2xx body, all properties of response DTOs are required (a nullable one is `T | null`, never `?`), and a 400 is `ValidationProblemDetails` with `errors?: Record<string, string[]>` (field → messages). The server offers each JSON body under three media types (`text/plain`, `application/json`, `text/json`) — index with `'application/json'`. Request bodies stay lenient (`title?: string`): leaving a property out is part of the contract (default or cleared).
 
 ## State of the code
 

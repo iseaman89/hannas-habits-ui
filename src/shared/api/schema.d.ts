@@ -45,9 +45,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Conflict */
@@ -110,9 +110,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -186,9 +186,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -262,9 +262,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -323,9 +323,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -410,15 +410,26 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["DailyDiaryDayDto"][];
+                        "application/json": components["schemas"]["DailyDiaryDayDto"][];
+                        "text/json": components["schemas"]["DailyDiaryDayDto"][];
+                    };
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -460,6 +471,17 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["DailyDiaryDto"];
+                        "application/json": components["schemas"]["DailyDiaryDto"];
+                        "text/json": components["schemas"]["DailyDiaryDto"];
+                    };
+                };
                 /** @description Unauthorized */
                 401: {
                     headers: {
@@ -514,9 +536,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -623,15 +645,26 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["HabitRecordDto"][];
+                        "application/json": components["schemas"]["HabitRecordDto"][];
+                        "text/json": components["schemas"]["HabitRecordDto"][];
+                    };
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -686,6 +719,17 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["HabitRecordDto"];
+                        "application/json": components["schemas"]["HabitRecordDto"];
+                        "text/json": components["schemas"]["HabitRecordDto"];
+                    };
+                };
                 /** @description Unauthorized */
                 401: {
                     headers: {
@@ -797,6 +841,17 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["HabitListItemDto"][];
+                        "application/json": components["schemas"]["HabitListItemDto"][];
+                        "text/json": components["schemas"]["HabitListItemDto"][];
+                    };
+                };
                 /** @description Unauthorized */
                 401: {
                     headers: {
@@ -826,15 +881,26 @@ export interface paths {
                 };
             };
             responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CreateHabitDto"];
+                        "application/json": components["schemas"]["CreateHabitDto"];
+                        "text/json": components["schemas"]["CreateHabitDto"];
+                    };
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -876,15 +942,26 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["HabitOverviewDto"][];
+                        "application/json": components["schemas"]["HabitOverviewDto"][];
+                        "text/json": components["schemas"]["HabitOverviewDto"][];
+                    };
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -926,6 +1003,17 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["HabitDetailsDto"];
+                        "application/json": components["schemas"]["HabitDetailsDto"];
+                        "text/json": components["schemas"]["HabitDetailsDto"];
+                    };
+                };
                 /** @description Unauthorized */
                 401: {
                     headers: {
@@ -980,9 +1068,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -1075,15 +1163,26 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ResolutionDto"][];
+                        "application/json": components["schemas"]["ResolutionDto"][];
+                        "text/json": components["schemas"]["ResolutionDto"][];
+                    };
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -1133,15 +1232,26 @@ export interface paths {
                 };
             };
             responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ResolutionDto"];
+                        "application/json": components["schemas"]["ResolutionDto"];
+                        "text/json": components["schemas"]["ResolutionDto"];
+                    };
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -1213,9 +1323,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
                     };
                 };
                 /** @description Unauthorized */
@@ -1318,20 +1428,46 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         AddResolutionRequest: {
-            title?: string | null;
+            title?: string;
             /** Format: uuid */
             habitId?: string | null;
         };
         AuthResult: {
-            user?: components["schemas"]["IdentityUserDto"];
-            tokens?: components["schemas"]["TokenPair"];
+            user: components["schemas"]["IdentityUserDto"];
+            tokens: components["schemas"]["TokenPair"];
+        };
+        CreateHabitDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            schedule: components["schemas"]["DayOfWeek"][];
+            /** Format: date */
+            startDate: string;
         };
         CreateHabitRequest: {
-            title?: string | null;
+            title?: string;
             description?: string | null;
             schedule?: components["schemas"]["DayOfWeek"][] | null;
             /** Format: date */
             startDate?: string | null;
+        };
+        DailyDiaryDayDto: {
+            /** Format: date */
+            date: string;
+            mood: components["schemas"]["Mood"] | null;
+        };
+        DailyDiaryDto: {
+            /** Format: date */
+            date: string;
+            mood: components["schemas"]["Mood"] | null;
+            /** Format: int32 */
+            body: number | null;
+            /** Format: int32 */
+            mind: number | null;
+            highlight: string | null;
+            grateful: string[];
+            learned: string[];
+            tasks: components["schemas"]["DiaryTaskDto"][];
         };
         /**
          * Format: int32
@@ -1339,22 +1475,59 @@ export interface components {
          */
         DayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6;
         DiaryTaskDto: {
-            title?: string | null;
-            done?: boolean;
+            title: string;
+            done: boolean;
         };
         GoogleLoginRequest: {
-            idToken?: string | null;
+            idToken?: string;
+        };
+        HabitDetailsDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            description: string | null;
+            schedule: components["schemas"]["DayOfWeek"][];
+            /** Format: date */
+            startDate: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        HabitListItemDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            description: string | null;
+            schedule: components["schemas"]["DayOfWeek"][];
+        };
+        HabitOverviewDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            schedule: components["schemas"]["DayOfWeek"][];
+            /** Format: date */
+            startDate: string;
+            completedDates: string[];
+            /** Format: int32 */
+            currentStreak: number;
+        };
+        HabitRecordDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            habitId: string;
+            /** Format: date */
+            date: string;
         };
         IdentityUserDto: {
             /** Format: uuid */
-            id?: string;
-            userName?: string | null;
-            email?: string | null;
-            displayName?: string | null;
+            id: string;
+            userName: string;
+            email: string;
+            displayName: string;
         };
         LoginRequest: {
-            email?: string | null;
-            password?: string | null;
+            email?: string;
+            password?: string;
         };
         /**
          * Format: int32
@@ -1372,18 +1545,27 @@ export interface components {
             [key: string]: unknown;
         };
         RefreshRequest: {
-            refreshToken?: string | null;
+            refreshToken?: string;
         };
         RegisterRequest: {
-            email?: string | null;
-            password?: string | null;
+            email?: string;
+            password?: string;
             displayName?: string | null;
         };
+        ResolutionDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            kept: boolean;
+            /** Format: uuid */
+            habitId: string | null;
+            habitTitle: string | null;
+        };
         RevokeRequest: {
-            refreshToken?: string | null;
+            refreshToken?: string;
         };
         SaveDailyDiaryRequest: {
-            mood?: components["schemas"]["Mood"];
+            mood?: components["schemas"]["Mood"] | null;
             /** Format: int32 */
             body?: number | null;
             /** Format: int32 */
@@ -1394,23 +1576,36 @@ export interface components {
             tasks?: components["schemas"]["DiaryTaskDto"][] | null;
         };
         TokenPair: {
-            accessToken?: string | null;
-            refreshToken?: string | null;
+            accessToken: string;
+            refreshToken: string;
             /** Format: date-time */
-            accessTokenExpiresAt?: string;
+            accessTokenExpiresAt: string;
             /** Format: date-time */
-            refreshTokenExpiresAt?: string;
+            refreshTokenExpiresAt: string;
         };
         UpdateHabitRequest: {
-            title?: string | null;
+            title?: string;
             description?: string | null;
-            schedule?: components["schemas"]["DayOfWeek"][] | null;
+            schedule?: components["schemas"]["DayOfWeek"][];
         };
         UpdateResolutionRequest: {
-            title?: string | null;
+            title?: string;
             kept?: boolean | null;
             /** Format: uuid */
             habitId?: string | null;
+        };
+        ValidationProblemDetails: {
+            type?: string | null;
+            title?: string | null;
+            /** Format: int32 */
+            status?: number | null;
+            detail?: string | null;
+            instance?: string | null;
+            errors?: {
+                [key: string]: string[];
+            };
+        } & {
+            [key: string]: unknown;
         };
     };
     responses: never;
