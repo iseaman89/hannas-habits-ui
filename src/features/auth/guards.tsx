@@ -32,11 +32,30 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
-/** Layout route for the login page: somebody who is already signed in has no business there. */
+/**
+ * Only a path inside the app is a place to send somebody back to. `from` is written by
+ * `RequireAuth`, so this is a second lock, not the first: a `//host`, `/\host` or `https://…` value
+ * would leave the app.
+ */
+function returnPath(from: string | undefined): string {
+  if (!from) return '/';
+  const staysInApp = from.startsWith('/') && !from.startsWith('//') && !from.includes('\\');
+  return staysInApp ? from : '/';
+}
+
+/**
+ * Layout route for the login page. Somebody who is already signed in has no business there; they
+ * go back to the page `RequireAuth` turned them away from (also right after they signed in on
+ * the login page), or to the start page.
+ */
 export function PublicOnly() {
   const { status } = useAuth();
+  const location = useLocation();
 
   if (status === 'restoring') return <PageSpinner />;
-  if (status === 'authenticated') return <Navigate to="/" replace />;
+  if (status === 'authenticated') {
+    const state = location.state as LoginLocationState | null;
+    return <Navigate to={returnPath(state?.from)} replace />;
+  }
   return <Outlet />;
 }

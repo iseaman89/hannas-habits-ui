@@ -1,5 +1,10 @@
 import { render, screen } from '@testing-library/react';
-import { createMemoryRouter, RouterProvider, useLocation } from 'react-router-dom';
+import {
+  createMemoryRouter,
+  RouterProvider,
+  useLocation,
+  type InitialEntry,
+} from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 import { ToastProvider } from '@/shared/ui';
@@ -13,7 +18,7 @@ function LoginProbe() {
   return <p>login page (from: {from})</p>;
 }
 
-function setup(state: typeof signedOut, at: string) {
+function setup(state: typeof signedOut, at: InitialEntry) {
   const router = createMemoryRouter(
     [
       { element: <PublicOnly />, children: [{ path: '/login', element: <LoginProbe /> }] },
@@ -80,5 +85,30 @@ describe('PublicOnly', () => {
     setup(restoring, '/login');
 
     expect(screen.getByRole('status')).toHaveTextContent('Loading…');
+  });
+
+  it('takes a person who just signed in back to the page that sent them to the login', () => {
+    const router = setup(signedIn, {
+      pathname: '/login',
+      state: { from: '/habits?month=2026-10' },
+    });
+
+    expect(router.state.location.pathname).toBe('/habits');
+    expect(router.state.location.search).toBe('?month=2026-10');
+    expect(screen.getByText('habits')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['another site', 'https://evil.example/steal'],
+    ['a protocol-relative URL', '//evil.example/steal'],
+    ['a backslash path the browser reads as //', '/\\evil.example'],
+    ['not a path', 'habits'],
+    ['the login page itself', '/login'],
+    ['an empty value', ''],
+  ])('does not follow %s', (_name, from) => {
+    const router = setup(signedIn, { pathname: '/login', state: { from } });
+
+    expect(router.state.location.pathname).toBe('/');
+    expect(screen.getByText('today')).toBeInTheDocument();
   });
 });

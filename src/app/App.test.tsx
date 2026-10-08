@@ -28,7 +28,7 @@ describe('the app skeleton', () => {
     const { router } = renderApp(signedOut, '/habits');
 
     expect(router.state.location.pathname).toBe('/login');
-    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
   });
 
@@ -104,7 +104,7 @@ describe('the app skeleton', () => {
 
     // What the real session does: it announces that nobody is signed in any more.
     act(() => session.set(signedOut));
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/login');
   });
 
