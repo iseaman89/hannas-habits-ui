@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/shared/ui';
 import { AuthContext, type AuthApi } from './auth-context';
@@ -27,12 +27,10 @@ export function AuthProvider({ session, children }: AuthProviderProps) {
     void session.restore();
   }, [session]);
 
+  // The cleanup runs when the person changes or leaves: their data goes with them.
   const userId = state.user?.id ?? null;
-  const previousUserId = useRef(userId);
   useEffect(() => {
-    if (previousUserId.current === userId) return;
-    previousUserId.current = userId;
-    queryClient.clear();
+    return () => queryClient.clear();
   }, [userId, queryClient]);
 
   useEffect(() => {

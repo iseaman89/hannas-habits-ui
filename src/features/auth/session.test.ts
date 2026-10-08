@@ -3,6 +3,7 @@ import { ApiError } from '@/shared/api';
 import { inPageExclusive } from '@/shared/lib/exclusive';
 import {
   createSession,
+  parseServerTime,
   type AuthResult,
   type RefreshTokenStore,
   type Session,
@@ -395,5 +396,22 @@ describe('subscribe', () => {
     const { session } = setup({ startSignedIn: true });
 
     expect(session.getState()).toBe(session.getState());
+  });
+});
+
+describe('parseServerTime', () => {
+  it('reads the 7-digit timestamps the server writes', () => {
+    expect(parseServerTime('2026-10-08T13:23:37.3257235Z')).toBe(
+      Date.parse('2026-10-08T13:23:37.325Z'),
+    );
+  });
+
+  it('reads timestamps with fewer or no fractional digits', () => {
+    expect(parseServerTime('2026-10-08T13:23:37Z')).toBe(Date.parse('2026-10-08T13:23:37Z'));
+    expect(parseServerTime('2026-10-08T13:23:37.5Z')).toBe(Date.parse('2026-10-08T13:23:37.5Z'));
+  });
+
+  it('gives NaN for anything else, which the session treats as expired', () => {
+    expect(parseServerTime('soon')).toBeNaN();
   });
 });

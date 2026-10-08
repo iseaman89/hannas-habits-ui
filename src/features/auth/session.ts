@@ -51,6 +51,15 @@ export interface Session extends ClientAuth {
   end: () => Promise<void>;
 }
 
+/**
+ * The server writes .NET timestamps with 7 fractional digits (`...37.3257235Z`). The ISO format
+ * of the JavaScript spec has 3, and not every engine is lenient about more: cut them off.
+ * An unreadable value gives NaN, which counts as "expired" (the safe side).
+ */
+export function parseServerTime(iso: string): number {
+  return Date.parse(iso.replace(/(\.\d{3})\d+/, '$1'));
+}
+
 /** The access token is treated as expired a little early, so a request is not already doomed in flight. */
 const EXPIRY_MARGIN_MS = 10_000;
 
@@ -86,7 +95,7 @@ export function createSession({
   function adopt(result: AuthResult) {
     store.write(result.tokens.refreshToken);
     accessToken = result.tokens.accessToken;
-    accessTokenExpiresAt = Date.parse(result.tokens.accessTokenExpiresAt);
+    accessTokenExpiresAt = parseServerTime(result.tokens.accessTokenExpiresAt);
     setState({ status: 'authenticated', user: result.user, endedBy: null });
   }
 
