@@ -43,13 +43,14 @@ App will be running at:
 
 ## ⚙️ API Configuration
 
-Set your backend base URL in `.env` file:
+Copy `.env.example` to `.env` and fill it in:
 
 ```
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=https://localhost:7054/api
+VITE_GOOGLE_CLIENT_ID=<your OAuth client id>
 ```
 
-*(Adjust the port depending on your backend configuration.)*
+*(Adjust the URL to your backend. Both values are public: Vite inlines them into the bundle at build time, so never put secrets there.)*
 
 ---
 
