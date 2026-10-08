@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -491,5 +491,170 @@ describe('together with the diary', () => {
       await screen.findByRole('link', { name: 'Wednesday 7 October: no entry' }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/entry$|entries$/)).not.toBeInTheDocument();
+  });
+});
+
+describe('the keyboard', () => {
+  const link = (name: string) => screen.getByRole('link', { name: new RegExp(`^${name}:`) });
+  const stops = (table: HTMLElement) =>
+    within(table)
+      .getAllByRole('link')
+      .filter((day) => day.getAttribute('tabindex') === '0')
+      .map((day) => day.getAttribute('data-date'));
+  const focusedDay = () =>
+    document.activeElement instanceof HTMLElement ? document.activeElement.dataset.date : undefined;
+
+  it('has one tab stop per month, not one per day', async () => {
+    renderPage(entries());
+    await screen.findByRole('table', { name: 'October' });
+
+    expect(stops(month('October'))).toEqual(['2026-10-07']); // today
+    expect(stops(month('March'))).toEqual(['2026-03-01']); // a month gone by: its first day
+    expect(stops(month('January'))).toEqual(['2026-01-01']);
+    // A month to come has no link at all, so nothing to stop at.
+    expect(within(month('December')).queryAllByRole('link')).toEqual([]);
+  });
+
+  it('lets Tab walk from month to month, one stop each', async () => {
+    const user = userEvent.setup();
+    renderPage(entries());
+    await screen.findByRole('table', { name: 'October' });
+
+    const visited: string[] = [];
+    for (let step = 0; step < 13; step++) {
+      await user.tab();
+      const day = focusedDay();
+      if (day) visited.push(day);
+    }
+
+    expect(visited).toEqual([
+      '2026-01-01',
+      '2026-02-01',
+      '2026-03-01',
+      '2026-04-01',
+      '2026-05-01',
+      '2026-06-01',
+      '2026-07-01',
+      '2026-08-01',
+      '2026-09-01',
+      '2026-10-07',
+    ]);
+  });
+
+  it('moves between the days of a month with the arrow keys, and the tab stop moves with the focus', async () => {
+    const user = userEvent.setup();
+    renderPage(entries());
+    await screen.findByRole('table', { name: 'October' });
+
+    link('Wednesday 7 October').focus();
+    await user.keyboard('{ArrowLeft}');
+    expect(focusedDay()).toBe('2026-10-06');
+    expect(stops(month('October'))).toEqual(['2026-10-06']);
+
+    await user.keyboard('{ArrowLeft}{ArrowLeft}');
+    expect(focusedDay()).toBe('2026-10-04');
+    await user.keyboard('{ArrowRight}');
+    expect(focusedDay()).toBe('2026-10-05');
+  });
+
+  it('moves a week up and down, and to the start and end of the week', async () => {
+    const user = userEvent.setup();
+    const diary = fakeDiary([]);
+    vi.setSystemTime(new Date(2026, 9, 20, 12, 0)); // the 20th: two full weeks behind it
+    renderPage(diary);
+    await screen.findByRole('table', { name: 'October' });
+
+    link('Tuesday 13 October').focus();
+    await user.keyboard('{ArrowUp}');
+    expect(focusedDay()).toBe('2026-10-06');
+    await user.keyboard('{ArrowDown}{ArrowDown}');
+    expect(focusedDay()).toBe('2026-10-20');
+    await user.keyboard('{Home}');
+    expect(focusedDay()).toBe('2026-10-19');
+    await user.keyboard('{End}');
+    expect(focusedDay()).toBe('2026-10-20'); // Sunday the 25th has not begun
+  });
+
+  it('stays where it is at the edge of the month and in front of days to come', async () => {
+    const user = userEvent.setup();
+    renderPage(entries());
+    await screen.findByRole('table', { name: 'October' });
+
+    link('Thursday 1 October').focus();
+    await user.keyboard('{ArrowLeft}{ArrowUp}');
+    expect(focusedDay()).toBe('2026-10-01'); // September has a table of its own
+
+    link('Wednesday 7 October').focus();
+    await user.keyboard('{ArrowRight}{ArrowDown}');
+    expect(focusedDay()).toBe('2026-10-07'); // the 8th and the 14th have not begun
+  });
+
+  it('leaves a shortcut with a modifier to the browser (Alt+Left is "back")', async () => {
+    const user = userEvent.setup();
+    renderPage(entries());
+    await screen.findByRole('table', { name: 'October' });
+
+    link('Wednesday 7 October').focus();
+    await user.keyboard('{Alt>}{ArrowLeft}{/Alt}');
+    expect(focusedDay()).toBe('2026-10-07');
+    await user.keyboard('{Shift>}{ArrowLeft}{/Shift}');
+    expect(focusedDay()).toBe('2026-10-07');
+  });
+
+  it('comes back to the day it left when Tab returns to the month', async () => {
+    const user = userEvent.setup();
+    renderPage(entries());
+    await screen.findByRole('table', { name: 'October' });
+    link('Wednesday 7 October').focus();
+    await user.keyboard('{ArrowLeft}{ArrowLeft}');
+    expect(focusedDay()).toBe('2026-10-05');
+
+    await user.tab(); // out of the calendar
+    expect(focusedDay()).toBeUndefined();
+    await user.tab({ shift: true }); // and back in
+
+    expect(focusedDay()).toBe('2026-10-05');
+  });
+
+  it('claims the keys it uses (no scrolling of the page) and no others', async () => {
+    renderPage(entries());
+    await screen.findByRole('table', { name: 'October' });
+    const today = link('Wednesday 7 October');
+
+    // fireEvent returns false when the handler called preventDefault().
+    expect(fireEvent.keyDown(today, { key: 'ArrowLeft' })).toBe(false);
+    expect(fireEvent.keyDown(today, { key: 'Home' })).toBe(false);
+    expect(fireEvent.keyDown(today, { key: 'a' })).toBe(true);
+    expect(fireEvent.keyDown(today, { key: 'Tab' })).toBe(true);
+    // At the edge there is nowhere to go: the key is left to the browser.
+    link('Thursday 1 October').focus();
+    expect(fireEvent.keyDown(link('Thursday 1 October'), { key: 'ArrowLeft' })).toBe(true);
+  });
+
+  it('still has a tab stop in every month when the year changes to one that is already loaded', async () => {
+    const user = userEvent.setup();
+    renderPage(entries());
+    await screen.findByRole('table', { name: 'October' });
+    await user.click(screen.getByRole('button', { name: 'Previous year' }));
+    await screen.findByRole('table', { name: 'October' });
+    link('Friday 3 October').focus(); // the October card remembers 3 October 2025
+
+    // 2026 is in the cache, so it replaces 2025 at once and the cards keep their memory.
+    await user.click(screen.getByRole('button', { name: 'Next year' }));
+
+    // 3 October 2025 is no day of 2026: the card must fall back to a day of its own year.
+    expect(stops(month('October'))).toEqual(['2026-10-07']);
+    expect(stops(month('March'))).toEqual(['2026-03-01']);
+  });
+
+  it('opens the day that has the focus with Enter', async () => {
+    const user = userEvent.setup();
+    renderPage(entries());
+    await screen.findByRole('table', { name: 'October' });
+
+    link('Wednesday 7 October').focus();
+    await user.keyboard('{ArrowLeft}{Enter}');
+
+    expect(address()).toBe('/diary/2026-10-06');
   });
 });

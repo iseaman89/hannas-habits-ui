@@ -71,6 +71,11 @@ interface DayDotProps {
   date: Date;
   state: DayState;
   isToday: boolean;
+  /**
+   * Whether this is the one day of its month that Tab stops at. The others are reached with the
+   * arrow keys (`MonthCard`), so a year is twelve tab stops and not 365.
+   */
+  tabStop?: boolean;
 }
 
 /**
@@ -78,7 +83,7 @@ interface DayDotProps {
  * it holds ("Wednesday 7 October: mood Great"); a day to come is just its number, which the
  * table's weekday header and month heading already put in context.
  */
-export function DayDot({ date, state, isToday }: DayDotProps) {
+export function DayDot({ date, state, isToday, tabStop = true }: DayDotProps) {
   const face = (
     <DayFace
       state={state}
@@ -94,6 +99,8 @@ export function DayDot({ date, state, isToday }: DayDotProps) {
   return (
     <Link
       to={`/diary/${toApiDate(date)}`}
+      data-date={toApiDate(date)}
+      tabIndex={tabStop ? 0 : -1}
       aria-label={`${format(date, 'EEEE d MMMM')}: ${describe(state)}`}
       aria-current={isToday ? 'date' : undefined}
       className="group inline-grid rounded-full"

@@ -1,9 +1,10 @@
-import { useId } from 'react';
+import { useId, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import { addDays, format } from 'date-fns';
 import { Card } from '@/shared/ui';
-import { toApiDate } from '@/shared/lib/dates';
+import { parseApiDate, toApiDate } from '@/shared/lib/dates';
 import { DayDot } from './DayDot';
-import { dayState, type Mood } from './dayState';
+import { dayToFocus } from './dayKeys';
+import { dayState, opensDiary, type Mood } from './dayState';
 import { weeksOfMonth } from './monthGrid';
 
 /** Monday to Sunday, any week will do: 1 January 2024 was a Monday. */
@@ -26,12 +27,56 @@ function entriesLabel(count: number): string | null {
   return count === 1 ? '1 entry' : `${count} entries`;
 }
 
-/** One month: its name, how many days have an entry and the days as a Monday-first table. */
+/**
+ * One month: its name, how many days have an entry and the days as a Monday-first table.
+ *
+ * Keyboard: Tab stops at **one** day of the month (the day last focused; before that today, or
+ * the first day) and the arrow keys, Home and End move between the days that can be opened
+ * (`dayToFocus`) - a roving tabindex. A year of links would otherwise be up to 365 tab stops.
+ */
 export function MonthCard({ month, today, entries, current }: MonthCardProps) {
   const headingId = useId();
   const prefix = format(month, 'yyyy-MM');
   const count = [...entries.keys()].filter((date) => date.startsWith(prefix)).length;
   const counted = entriesLabel(count);
+
+  const openable = new Set(
+    weeksOfMonth(month)
+      .flat()
+      .filter((day): day is Date => day !== null)
+      .map(toApiDate)
+      .filter((date) => opensDiary(dayState(date, today, entries))),
+  );
+  const [lastFocused, setLastFocused] = useState<string | null>(null);
+  const tabStop =
+    lastFocused !== null && openable.has(lastFocused)
+      ? lastFocused
+      : openable.has(today)
+        ? today
+        : ([...openable][0] ?? null);
+
+  /** The day (`yyyy-MM-dd`) of the link an event came from. */
+  const dayOf = (target: EventTarget) =>
+    target instanceof Element
+      ? (target.closest<HTMLElement>('[data-date]')?.dataset.date ?? null)
+      : null;
+
+  function onFocus(event: FocusEvent<HTMLTableElement>) {
+    const date = dayOf(event.target);
+    if (date) setLastFocused(date);
+  }
+
+  function onKeyDown(event: KeyboardEvent<HTMLTableElement>) {
+    // Alt+Left is the browser's "back"; a shortcut with a modifier is not ours.
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const from = parseApiDate(dayOf(event.target) ?? '');
+    if (!from) return;
+
+    const to = dayToFocus(from, event.key, (day) => openable.has(toApiDate(day)));
+    if (!to) return;
+    event.preventDefault();
+    event.currentTarget.querySelector<HTMLElement>(`[data-date="${toApiDate(to)}"]`)?.focus();
+  }
 
   return (
     <Card tone={current ? 'soft' : 'surface'} className="p-5">
@@ -42,7 +87,12 @@ export function MonthCard({ month, today, entries, current }: MonthCardProps) {
         {counted && <p className="text-xs font-bold text-neutral-700">{counted}</p>}
       </div>
 
-      <table aria-labelledby={headingId} className="w-full border-separate border-spacing-0">
+      <table
+        aria-labelledby={headingId}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+        className="w-full border-separate border-spacing-0"
+      >
         <thead>
           <tr>
             {WEEK.map((day) => (
@@ -63,6 +113,7 @@ export function MonthCard({ month, today, entries, current }: MonthCardProps) {
                       date={day}
                       state={dayState(toApiDate(day), today, entries)}
                       isToday={toApiDate(day) === today}
+                      tabStop={toApiDate(day) === tabStop}
                     />
                   )}
                 </td>
