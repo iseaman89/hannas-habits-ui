@@ -2,6 +2,7 @@ export { Button, IconButton } from './Button';
 export type { ButtonProps, ButtonSize, ButtonVariant, IconButtonProps } from './Button';
 export { Card } from './Card';
 export type { CardTone } from './Card';
+export { Checkbox } from './Checkbox';
 export { Dialog } from './Dialog';
 export { Field } from './Field';
 export type { FieldControlProps } from './Field';
