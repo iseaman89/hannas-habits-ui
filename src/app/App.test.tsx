@@ -69,7 +69,8 @@ describe('the app skeleton', () => {
     renderApp(signedIn, '/diary/2026-01-15');
 
     expect(screen.getByRole('link', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('heading', { name: '2026-01-15' })).toBeInTheDocument();
+    // The page shows its date at once, while the day itself is still loading.
+    expect(screen.getByRole('heading', { name: /^Thursday, 15 January/ })).toBeInTheDocument();
   });
 
   it('navigates between the screens', async () => {
