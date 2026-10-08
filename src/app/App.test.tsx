@@ -85,6 +85,10 @@ describe('the app skeleton', () => {
 
     await userEvent.click(screen.getByRole('link', { name: 'Resolutions' }));
     expect(router.state.location.pathname).toBe('/resolutions');
+    // The resolutions' title is "My <year>".
+    expect(
+      screen.getByRole('heading', { level: 1, name: `My ${new Date().getFullYear()}` }),
+    ).toBeInTheDocument();
   });
 
   it('says so for an address that does not exist, inside the shell', () => {

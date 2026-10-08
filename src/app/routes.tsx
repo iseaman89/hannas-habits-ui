@@ -3,7 +3,7 @@ import { LoginPage, PublicOnly, RequireAuth } from '@/features/auth';
 import { CalendarPage } from '@/features/calendar';
 import { DiaryPage, TodayRedirect } from '@/features/diary';
 import { HabitsPage } from '@/features/habits';
-import { ResolutionsPage } from '@/features/resolutions/ResolutionsPage';
+import { ResolutionsPage } from '@/features/resolutions';
 import { AppShell } from './AppShell';
 import { NotFoundPage } from './NotFoundPage';
 
