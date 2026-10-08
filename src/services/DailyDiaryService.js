@@ -14,8 +14,8 @@ export const getDailyDiaries = async (userId, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 };
 
@@ -29,8 +29,8 @@ export const getDailyDiaryIds = async (userId, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 };
 
@@ -44,8 +44,8 @@ export const getDailyDiary = async (id, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 };
 
@@ -58,8 +58,8 @@ export const getDailyDiaryByDay = async (userId, day, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 };
 
@@ -72,13 +72,12 @@ export const createDailyDiary = async (data, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 };
 
 export const updateDailyDiary = async (id, data, token) => {
-    console.log(data);
     try {
         const response = await dailyDiaryApi.put(`/${id}`, data, {
             headers: {
@@ -87,8 +86,8 @@ export const updateDailyDiary = async (id, data, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 }
 export const deleteDailyDiary = async (id, token) => {
@@ -100,7 +99,7 @@ export const deleteDailyDiary = async (id, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 }

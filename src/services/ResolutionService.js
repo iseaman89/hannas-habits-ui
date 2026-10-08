@@ -14,8 +14,8 @@ export const getResolutions = async (userId, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 };
 
@@ -28,8 +28,8 @@ export const getResolution = async (id, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 };
 
@@ -42,8 +42,8 @@ export const createResolution = async (data, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 };
 
@@ -54,11 +54,10 @@ export const updateResolution = async (id, data, token) => {
                 Authorization: `Bearer ${token}`,
             },
         });
-        console.log(response.data)
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 }
 export const deleteResolution = async (id, token) => {
@@ -70,7 +69,7 @@ export const deleteResolution = async (id, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 }

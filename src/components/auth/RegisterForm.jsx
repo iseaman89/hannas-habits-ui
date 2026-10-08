@@ -20,9 +20,8 @@ const RegisterForm = ({showRegister, setShowRegister}) => {
                 try {
                     await register(values);
                     toast.success('Register successful!');
-                } catch (error) {
+                } catch {
                     toast.error('Register failed! Please check your credentials.');
-                    console.error('Register error', error);
                 } finally {
                     setSubmitting(false);
                 }

@@ -16,8 +16,7 @@ const DeleteHabit = ({setHabits, id, isOpen, onClose}) => {
                 className: 'container'
             });
             onClose();
-        } catch (error) {
-            console.log(error);
+        } catch {
             toast.error('Delete failed!', {
                 className: 'container'
             });

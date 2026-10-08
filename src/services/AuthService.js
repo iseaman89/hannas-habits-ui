@@ -18,8 +18,8 @@ export const register = async (userData) => {
     try {
         const response = await authApi.post('/register', userData);
         return response.data;
-    } catch (error) {
-        console.log(error);
+    } catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 };
 

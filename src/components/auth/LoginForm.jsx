@@ -15,12 +15,11 @@ function LoginForm({showRegister, setShowRegister}) {
 
     const handleLoginGoogle = async (idToken) => {
         try {
-            console.log(idToken)
             const response = await loginGoogle(idToken);
             authLogin(response);
             navigate('/daily-diary', {state: {id: -1, date: new Date().toISOString()}});
-        } catch (error) {
-            console.error("Error logging in:", error);
+        } catch {
+            // error ignored on purpose until the API client is rewritten (ROADMAP F3)
         }
     };
 
@@ -37,12 +36,11 @@ function LoginForm({showRegister, setShowRegister}) {
                     authLogin(data);
                     toast.success('Login successful!');
                     navigate('/daily-diary', {state: {id: -1, date: new Date().toISOString()}});
-                } catch (error) {
+                } catch {
                     toast.error('Please check your credentials.', {
                         className: 'container',
                         ariaLabel: 'Login failed!',
                     });
-                    console.error('Login error', error);
                 } finally {
                     setSubmitting(false);
                 }

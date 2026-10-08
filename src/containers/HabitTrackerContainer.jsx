@@ -22,8 +22,8 @@ const HabitTrackerContainer = () => {
         try {
             const data = await getHabits(userId, token);
             setHabits(data);
-        } catch (error) {
-            console.log(error);
+        } catch {
+            // error ignored on purpose until the API client is rewritten (ROADMAP F3)
         }
     }
     
@@ -31,8 +31,8 @@ const HabitTrackerContainer = () => {
         for (const habit of habits) {
             try {
                 await updateHabit(habit.id, habit, token);
-            } catch (error) {
-                console.log(error);
+            } catch {
+                // error ignored on purpose until the API client is rewritten (ROADMAP F3)
             }
         }
         fetchData();
@@ -48,7 +48,6 @@ const HabitTrackerContainer = () => {
                 habit.id === updatedHabit.id ? updatedHabit : habit
             )
         );
-        console.log(habits)
     };
     
     const handleForward = () => {

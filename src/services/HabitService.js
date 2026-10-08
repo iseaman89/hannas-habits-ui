@@ -13,8 +13,8 @@ export const getHabits = async (userId, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 };
 
@@ -27,8 +27,8 @@ export const getHabit = async (id, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 };
 
@@ -41,8 +41,8 @@ export const createHabit = async (data, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 };
 
@@ -53,11 +53,10 @@ export const updateHabit = async (id, data, token) => {
                 Authorization: `Bearer ${token}`,
             },
         });
-        console.log(response.data)
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 }
 export const deleteHabit = async (id, token) => {
@@ -69,8 +68,8 @@ export const deleteHabit = async (id, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 }
 
@@ -83,8 +82,8 @@ export const deleteCompletion = async (id, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 }
 
@@ -97,7 +96,7 @@ export const createCompletion = async (completion, token) => {
         });
         return response.data;
     }
-    catch (error) {
-        console.log(error);
+    catch {
+        // error ignored on purpose until the API client is rewritten (ROADMAP F3)
     }
 }

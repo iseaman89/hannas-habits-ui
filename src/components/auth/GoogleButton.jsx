@@ -7,11 +7,9 @@ const GoogleButton = ({onLoginSuccess}) => {
     const handleGoogleLogin = useGoogleLogin({
         onSuccess: (credentialResponse) => {
             onLoginSuccess(credentialResponse.credential);
-            console.log(credentialResponse.credential);
         },
         onError: () => {
-            
-            console.log("Login Failed");
+            // failure is not shown yet; F4 reworks the Google login
         },
         ux_mode: "popup"
     });

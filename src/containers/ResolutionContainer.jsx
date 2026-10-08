@@ -20,8 +20,8 @@ const ResolutionContainer = () => {
             try {
                 const data = await getResolutions(userId, token);
                 setResolutions(data);
-            } catch (error) {
-                console.log(error);
+            } catch {
+                // error ignored on purpose until the API client is rewritten (ROADMAP F3)
             }
         };
         fetchData();
@@ -62,11 +62,10 @@ const ResolutionContainer = () => {
             toast.success('Updated!', {
                 className: 'container'
             });
-        } catch (error) {
+        } catch {
             toast.error('Update failed!', {
                 className: 'container'
             });
-            console.log(error);
         }
     }
     

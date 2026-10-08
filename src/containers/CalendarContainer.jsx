@@ -14,8 +14,8 @@ const CalendarContainer = () => {
             try {
                 const data = await getDailyDiaryIds(userId, token);
                 setDailyDiaryIds(data);
-            } catch (error) {
-                console.log(error);
+            } catch {
+                // error ignored on purpose until the API client is rewritten (ROADMAP F3)
             }
         }
         

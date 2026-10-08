@@ -30,10 +30,8 @@ const DailyDiaryContainer = () => {
             try {
                 const data = await getDailyDiaryByDay(userId, date, token, { signal: abortController.signal });
                 setDailyDiary(data);
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error('Error fetching topics', error);
-                }
+            } catch {
+                // error ignored on purpose until the API client is rewritten (ROADMAP F3)
             }
         };
 
@@ -41,8 +39,8 @@ const DailyDiaryContainer = () => {
             try {
                 const data = await getDailyDiary(id, token);
                 setDailyDiary(data);
-            } catch (error) {
-                console.error('Error fetching topics', error);
+            } catch {
+                // error ignored on purpose until the API client is rewritten (ROADMAP F3)
             }
         };
 
@@ -61,11 +59,10 @@ const DailyDiaryContainer = () => {
             toast.success('Updated!', {
                 className: 'container'
             });
-        } catch (error) {
+        } catch {
             toast.error('Update failed!', {
                 className: 'container'
             });
-            console.log(error);
         }
     }
     

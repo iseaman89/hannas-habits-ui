@@ -21,7 +21,6 @@ export const AuthProvider = ({ children }) => {
 
         const currentTime = Date.now();
         if (currentTime > tokenExpiration) {
-            console.log("Token expired, logging out...");
             logout();
             return;
         }

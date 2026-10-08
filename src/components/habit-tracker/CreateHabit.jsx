@@ -35,8 +35,7 @@ const CreateHabit = ({addHabit}) => {
             });
             handleClose();
         }
-        catch (error) {
-            console.log(error);
+        catch {
             toast.error('Create failed!', {
                 className: 'container'
             });
