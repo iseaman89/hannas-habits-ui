@@ -13,8 +13,9 @@
  * `@theme static` emits every token even when no class uses it, so inline styles and `var()`
  * in plain CSS can always rely on them.
  *
- * TODO(F9): once the old UI is gone, add `--color-*: initial;` at the top of @theme so only the
- * design's colours exist (the old screens still use Tailwind's default white/black/grey).
+ * `--color-*: initial` drops Tailwind's default palette (red-500, white, black ...): only the
+ * design's colours exist, so a stray `bg-white` generates nothing instead of a colour that
+ * ignores the theme switch.
  */
 
 :root {
@@ -52,6 +53,8 @@
 }
 
 @theme static {
+  --color-*: initial;
+
   /* Roles. `accent` (terracotta) and `accent-2` (sage) are not simply ramp step 500 in light. */
   --color-bg: #f5ead8;
   --color-surface: #ebddc5;

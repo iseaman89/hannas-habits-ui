@@ -17,32 +17,7 @@ export default defineConfig([
   // schema.d.ts is generated (npm run api:types).
   globalIgnores(['dist', 'coverage', 'src/shared/api/schema.d.ts']),
 
-  // The old UI (plain JS). Unchanged on purpose: it is rewritten in TypeScript step by step
-  // (F2-F8) and its pre-existing findings go away with it.
-  {
-    files: ['**/*.{js,jsx}'],
-    languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
-      parserOptions: {
-        ecmaVersion: 'latest',
-        ecmaFeatures: { jsx: true },
-        sourceType: 'module',
-      },
-    },
-    settings: reactSettings,
-    plugins: reactPlugins,
-    rules: {
-      ...js.configs.recommended.rules,
-      ...react.configs.recommended.rules,
-      ...react.configs['jsx-runtime'].rules,
-      ...reactHooks.configs.recommended.rules,
-      'react/jsx-no-target-blank': 'off',
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-    },
-  },
-
-  // New code (TypeScript), with type-aware rules (e.g. no floating promises: an un-awaited
+  // The app (TypeScript), with type-aware rules (e.g. no floating promises: an un-awaited
   // request would swallow its error).
   {
     files: ['**/*.{ts,tsx}'],

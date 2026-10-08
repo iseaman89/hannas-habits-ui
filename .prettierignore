@@ -6,15 +6,6 @@ coverage
 # Generated from the backend's OpenAPI document (npm run api:types).
 src/shared/api/schema.d.ts
 
-# The old UI is not reformatted: it is replaced step by step (F2-F8), so a style-only diff
-# would just bury the history. New code is TypeScript and gets formatted.
-src/**/*.js
-src/**/*.jsx
-src/legacy.css
-src/App.css
-src/components/**/*.css
-src/assets
-
 # Not ours / not code.
 .devcontainer
 .idea

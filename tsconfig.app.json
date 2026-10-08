@@ -12,11 +12,6 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
 
-    /* The old UI is still plain JS: it is imported (allowJs) but not type-checked. Every file
-       that gets rewritten in F2-F8 is written in TypeScript and deleted from the JS side. */
-    "allowJs": true,
-    "checkJs": false,
-
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,

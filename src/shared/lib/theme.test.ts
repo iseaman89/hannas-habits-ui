@@ -76,15 +76,14 @@ describe('systemTheme', () => {
 });
 
 describe('applyTheme', () => {
-  it('sets data-theme and the legacy dark class together', () => {
+  it('sets data-theme and nothing else', () => {
     const root = document.createElement('html');
 
     applyTheme('dark', root);
     expect(root.dataset.theme).toBe('dark');
-    expect(root).toHaveClass('dark');
 
     applyTheme('light', root);
     expect(root.dataset.theme).toBe('light');
-    expect(root).not.toHaveClass('dark');
+    expect(root.className).toBe('');
   });
 });

@@ -42,11 +42,7 @@ export function getInitialTheme(): Theme {
   return readStoredTheme() ?? systemTheme();
 }
 
-/**
- * Switches the tokens (`data-theme`). The `dark` class is a bridge for the old UI, whose
- * `dark:` utilities and `.dark` rules still key on it; it goes with the old UI.
- */
+/** Switches the tokens (`data-theme` on <html>). */
 export function applyTheme(theme: Theme, root: HTMLElement = document.documentElement): void {
   root.dataset.theme = theme;
-  root.classList.toggle('dark', theme === 'dark');
 }
