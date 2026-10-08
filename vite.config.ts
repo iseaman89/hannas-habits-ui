@@ -34,6 +34,9 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     restoreMocks: true,
+    // The autosave tests wait for the real 800 ms pause before a write. On a busy machine (CI, or
+    // a laptop compiling something) the default 5 s was hit once in a full run.
+    testTimeout: 15_000,
     // Required at start-up by shared/api/config.ts; no real server behind it.
     env: { VITE_API_URL: 'http://api.test/api' },
   },
