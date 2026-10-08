@@ -3,9 +3,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { ApiError } from '@/shared/api';
 import { applyServerError } from '@/shared/lib/formErrors';
-import { Button, Field, Input } from '@/shared/ui';
+import { Button, Field, FormMessage, Input } from '@/shared/ui';
 import { registerSchema, type RegisterValues } from './credentials';
-import { FormMessage } from './FormMessage';
 
 interface RegisterFormProps {
   /** Rejects with the `ApiError` of a failed attempt; resolves once the session has started. */

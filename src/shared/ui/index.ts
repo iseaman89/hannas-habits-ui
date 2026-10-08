@@ -5,6 +5,7 @@ export type { CardTone } from './Card';
 export { Dialog } from './Dialog';
 export { Field } from './Field';
 export type { FieldControlProps } from './Field';
+export { FormMessage } from './FormMessage';
 export { Input } from './Input';
 export type { InputProps } from './Input';
 export { PageHeader } from './PageHeader';

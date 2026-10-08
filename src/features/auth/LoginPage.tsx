@@ -1,8 +1,7 @@
 import { useState, type ComponentType } from 'react';
 import { errorMessage } from '@/shared/api';
-import { Button, Card, Tag, ThemeSwitch, useTheme } from '@/shared/ui';
+import { Button, Card, FormMessage, Tag, ThemeSwitch, useTheme } from '@/shared/ui';
 import { authGateway, type AuthGateway } from './authGateway';
-import { FormMessage } from './FormMessage';
 import { GoogleSection, type GoogleSectionProps } from './GoogleSection';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
