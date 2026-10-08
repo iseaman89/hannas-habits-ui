@@ -3,6 +3,8 @@ import type { DayOfWeek } from './weekdays';
 
 export type HabitOverview = Schema<'HabitOverviewDto'>;
 export type HabitDetails = Schema<'HabitDetailsDto'>;
+/** A habit as the plain list has it: enough to choose one by its title. */
+export type HabitListItem = Schema<'HabitListItemDto'>;
 export type CreatedHabit = Schema<'CreateHabitDto'>;
 
 /**
@@ -25,6 +27,8 @@ export interface HabitInput {
 
 /** The calls the habits screen makes. Dates are `yyyy-MM-dd`. */
 export interface HabitsGateway {
+  /** Every habit, in creation order - for a picker; no dates, no marks, no streak. */
+  list: (signal?: AbortSignal) => Promise<HabitListItem[]>;
   overview: (query: OverviewQuery, signal?: AbortSignal) => Promise<HabitOverview[]>;
   /** One habit with the fields the overview leaves out (the description). */
   details: (id: string, signal?: AbortSignal) => Promise<HabitDetails>;
@@ -41,6 +45,8 @@ export interface HabitsGateway {
 
 export function createHabitsGateway(client: TypedApi): HabitsGateway {
   return {
+    list: (signal) => client.get('/api/habits', { signal }),
+
     overview: (query, signal) => client.get('/api/habits/overview', { query, signal }),
 
     details: (id, signal) => client.get('/api/habits/{id}', { path: { id }, signal }),

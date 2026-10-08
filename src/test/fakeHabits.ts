@@ -1,6 +1,7 @@
 import type {
   HabitDetails,
   HabitInput,
+  HabitListItem,
   HabitOverview,
   HabitsGateway,
   OverviewQuery,
@@ -38,6 +39,7 @@ export function fakeHabits(initial: FakeHabit[] = []) {
   let created = 0;
 
   const calls = {
+    list: 0,
     overview: [] as OverviewQuery[],
     details: [] as string[],
     create: [] as (HabitInput & { startDate: string })[],
@@ -79,6 +81,17 @@ export function fakeHabits(initial: FakeHabit[] = []) {
   }
 
   const gateway: HabitsGateway = {
+    list: async () => {
+      calls.list++;
+      await enter('list');
+      return habits.map<HabitListItem>((habit) => ({
+        id: habit.id,
+        title: habit.title,
+        description: habit.description,
+        schedule: habit.schedule,
+      }));
+    },
+
     overview: async (query) => {
       calls.overview.push(query);
       await enter('overview');

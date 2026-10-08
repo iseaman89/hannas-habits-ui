@@ -11,6 +11,8 @@ export { Input } from './Input';
 export type { InputProps } from './Input';
 export { PageHeader } from './PageHeader';
 export { ProgressDonut } from './ProgressDonut';
+export { Select } from './Select';
+export type { SelectProps } from './Select';
 export { Slider } from './Slider';
 export { Spinner } from './Spinner';
 export { Tag } from './Tag';

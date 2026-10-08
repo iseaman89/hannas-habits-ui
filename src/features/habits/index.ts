@@ -1,3 +1,5 @@
 export { HabitsPage } from './HabitsPage';
-export type { HabitsGateway } from './habitsGateway';
+export { habitsGateway } from './habitsGateway';
+export type { HabitListItem, HabitsGateway } from './habitsGateway';
+export { useHabitList } from './habitQueries';
 export { TodayHabitsCard } from './TodayHabitsCard';

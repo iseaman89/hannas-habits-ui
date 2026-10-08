@@ -21,6 +21,16 @@ const overview = [
 ];
 
 describe('habits gateway', () => {
+  it('lists the habits without a range', async () => {
+    const habits = [{ id: 'h-1', title: 'Stretch', description: null, schedule: [1, 3] }];
+    const { gateway, requests } = gatewayFor({ status: 200, data: habits });
+
+    await expect(gateway.list()).resolves.toEqual(habits);
+
+    expect(requests[0]).toMatchObject({ method: 'get', url: '/habits' });
+    expect(requests[0]?.params).toBeUndefined();
+  });
+
   it('asks for the overview of a range with the client’s today', async () => {
     const { gateway, requests } = gatewayFor({ status: 200, data: overview });
 
