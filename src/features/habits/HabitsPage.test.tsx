@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -85,6 +85,28 @@ describe('the month', () => {
     expect(rowOf('Read')).toHaveTextContent('Mon · Wed · Fri');
     expect(streakOf('Stretch')).toBe('Current streak: 2');
     expect(streakOf('Read')).toBe('Current streak: 0');
+  });
+
+  it('moves "today" on when the tab was left open over midnight, and asks for the streak again', async () => {
+    const fake = fakeHabits([stretch]);
+    renderPage(fake);
+    await screen.findByRole('table');
+    expect(screen.getByRole('columnheader', { current: 'date' })).toHaveTextContent(
+      'Wednesday 7 October',
+    );
+    expect(fake.calls.overview.at(-1)?.asOf).toBe('2026-10-07');
+
+    // Overnight: the clock is on the next day, the person comes back to the tab.
+    vi.setSystemTime(new Date(2026, 9, 8, 7, 30));
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    await waitFor(() => expect(fake.calls.overview.at(-1)?.asOf).toBe('2026-10-08'));
+    // (The grid is asked for again under the new day, so it is back a moment later.)
+    expect(await screen.findByRole('columnheader', { current: 'date' })).toHaveTextContent(
+      'Thursday 8 October',
+    );
   });
 
   it('draws each day by what it is: done, open, due, upcoming, not planned, not started', async () => {

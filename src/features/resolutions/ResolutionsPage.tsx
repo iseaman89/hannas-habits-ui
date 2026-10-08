@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { habitsGateway, type HabitsGateway } from '@/features/habits';
 import { errorMessage } from '@/shared/api';
+import { useToday } from '@/shared/lib/useToday';
 import {
   Button,
   Card,
@@ -46,7 +47,7 @@ export function ResolutionsPage({
   const [searchParams, setSearchParams] = useSearchParams();
   const [dialog, setDialog] = useState<DialogState>({ kind: 'none' });
 
-  const now = new Date();
+  const now = useToday();
   const currentYear = now.getFullYear();
   const year = parseYearParam(searchParams.get('year')) ?? currentYear;
 

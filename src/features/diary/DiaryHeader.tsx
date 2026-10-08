@@ -2,6 +2,7 @@ import { addDays } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toApiDate } from '@/shared/lib/dates';
+import { useToday } from '@/shared/lib/useToday';
 import { IconButton, PageHeader } from '@/shared/ui';
 import type { SaveStatus } from './autosave';
 import { dayTitle } from './diaryDates';
@@ -20,12 +21,13 @@ export function DiaryHeader({ day, status, onRetry }: DiaryHeaderProps) {
   const navigate = useNavigate();
   const showDay = (offset: number) => void navigate(`/diary/${toApiDate(addDays(day, offset))}`);
   // There is no diary for a day that has not begun.
-  const isLastDay = toApiDate(day) >= toApiDate(new Date());
+  const today = useToday();
+  const isLastDay = toApiDate(day) >= toApiDate(today);
 
   return (
     <PageHeader
       kicker="Daily diary"
-      title={dayTitle(day)}
+      title={dayTitle(day, today)}
       status={status && <SavedIndicator status={status} onRetry={onRetry ?? (() => undefined)} />}
       actions={
         <>

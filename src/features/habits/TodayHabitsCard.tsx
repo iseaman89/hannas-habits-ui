@@ -2,6 +2,7 @@ import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { errorMessage } from '@/shared/api';
 import { parseApiDate, toApiDate } from '@/shared/lib/dates';
+import { useToday } from '@/shared/lib/useToday';
 import { Button, Card, Checkbox, FormMessage, Skeleton, SkeletonGroup } from '@/shared/ui';
 import { cellState, isToggleable, type CellState } from './cells';
 import { useMarkHabit } from './habitMutations';
@@ -29,7 +30,7 @@ interface HabitOfTheDay {
  * current one as of the real today, not of the day that is on screen.
  */
 export function TodayHabitsCard({ date, gateway = habitsGateway }: TodayHabitsCardProps) {
-  const today = toApiDate(new Date());
+  const today = toApiDate(useToday());
   const overview = useHabitOverview(gateway, { from: date, to: date, asOf: today });
   const mark = useMarkHabit(gateway);
 

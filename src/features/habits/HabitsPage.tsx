@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { errorMessage } from '@/shared/api';
 import { toApiDate } from '@/shared/lib/dates';
+import { useToday } from '@/shared/lib/useToday';
 import {
   Button,
   Card,
@@ -38,7 +39,7 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
   const [searchParams, setSearchParams] = useSearchParams();
   const [dialog, setDialog] = useState<DialogState>({ kind: 'none' });
 
-  const now = new Date();
+  const now = useToday();
   const today = toApiDate(now);
   const month = parseMonthParam(searchParams.get('month')) ?? startOfMonth(now);
 

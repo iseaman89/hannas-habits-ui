@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { diaryGateway, useDiaryDays, type DiaryGateway } from '@/features/diary';
 import { errorMessage } from '@/shared/api';
 import { toApiDate } from '@/shared/lib/dates';
+import { useToday } from '@/shared/lib/useToday';
 import { Button, FormMessage, IconButton, PageHeader, Skeleton, SkeletonGroup } from '@/shared/ui';
 import type { Mood } from './dayState';
 import { MonthCard } from './MonthCard';
@@ -19,7 +20,7 @@ import { FIRST_YEAR, parseYearParam, yearRange } from './years';
 export function CalendarPage({ gateway = diaryGateway }: { gateway?: DiaryGateway }) {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const now = new Date();
+  const now = useToday();
   const today = toApiDate(now);
   const currentYear = now.getFullYear();
   const year = parseYearParam(searchParams.get('year'), currentYear) ?? currentYear;
