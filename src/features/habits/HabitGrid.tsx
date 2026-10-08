@@ -38,7 +38,7 @@ export function HabitGrid({ habits, month, today, onToggle, onEdit, onDelete }: 
         <caption className="sr-only">Habits in {format(month, 'MMMM yyyy')}</caption>
         <thead>
           <tr>
-            <th scope="col" className={cn(stickyCell, 'w-64 min-w-56')}>
+            <th scope="col" className={cn(stickyCell, 'w-44 min-w-44 sm:w-64 sm:min-w-56')}>
               <span className="sr-only">Habit</span>
             </th>
             {days.map((date) => {
