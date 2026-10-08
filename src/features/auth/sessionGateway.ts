@@ -2,9 +2,9 @@ import type { TypedApi } from '@/shared/api';
 import type { SessionGateway } from './session';
 
 /**
- * The server calls behind the session, on a client that has no token logic of its own: a 401 from
- * `refresh` means "this refresh token is not valid" and must not start another refresh.
- * (Login, register and Google sign-in join here in F4.)
+ * The two server calls behind the session, on a client that has no token logic of its own: a 401
+ * from `refresh` means "this refresh token is not valid" and must not start another refresh.
+ * (The calls that start a session are in `authGateway.ts`.)
  */
 export function createSessionGateway(api: TypedApi): SessionGateway {
   return {

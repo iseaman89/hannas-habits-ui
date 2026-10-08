@@ -1,5 +1,6 @@
-import { API_BASE_URL, createHttpClient, createTypedApi, setClientAuth } from '@/shared/api';
+import { setClientAuth } from '@/shared/api';
 import { crossTabExclusive } from '@/shared/lib/exclusive';
+import { authApi } from './authClient';
 import { createRefreshTokenStore } from './refreshTokenStore';
 import { createSession } from './session';
 import { createSessionGateway } from './sessionGateway';
@@ -11,7 +12,7 @@ import { createSessionGateway } from './sessionGateway';
  */
 export const session = createSession({
   store: createRefreshTokenStore(),
-  gateway: createSessionGateway(createTypedApi(createHttpClient({ baseURL: API_BASE_URL }))),
+  gateway: createSessionGateway(authApi),
   // Tabs of one browser profile share the refresh token, so they have to share the lock.
   exclusive: crossTabExclusive('hh-refresh-token'),
 });
