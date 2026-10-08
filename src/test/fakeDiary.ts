@@ -1,5 +1,5 @@
 import type { DiaryDocument, SaveDiaryRequest } from '@/features/diary/diaryDraft';
-import type { DiaryGateway } from '@/features/diary/diaryGateway';
+import type { DateRange, DiaryGateway } from '@/features/diary/diaryGateway';
 
 type Call = keyof DiaryGateway;
 
@@ -37,7 +37,8 @@ function isEmpty(request: SaveDiaryRequest): boolean {
 /**
  * An in-memory stand-in for the diary API, steered by the test (like `fakeHabits`). It keeps the
  * days, answers like the server (404 as `null`, an empty `PUT` removes the entry, a `PUT`
- * replaces the whole day) and writes down every call.
+ * replaces the whole day, the list of days is built from the same days, oldest first, ends
+ * included) and writes down every call.
  *
  * - `hold()` lets calls wait until `release()`, to look at the screen while a request is on its way.
  * - `failNext()` makes the next call of that kind fail once.
@@ -48,6 +49,8 @@ export function fakeDiary(initial: DiaryDocument[] = []) {
 
   const calls = {
     load: [] as string[],
+    /** The ranges asked for by `days`, in order. */
+    days: [] as DateRange[],
     /** The requests that reached the "server", in order. */
     save: [] as { date: string; request: SaveDiaryRequest }[],
   };
@@ -69,6 +72,15 @@ export function fakeDiary(initial: DiaryDocument[] = []) {
       calls.load.push(date);
       await enter('load');
       return days.get(date) ?? null;
+    },
+
+    days: async (range) => {
+      calls.days.push(range);
+      await enter('days');
+      return [...days.values()]
+        .filter((day) => day.date >= range.from && day.date <= range.to)
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((day) => ({ date: day.date, mood: day.mood }));
     },
 
     save: async (date, request) => {
@@ -115,7 +127,7 @@ export function fakeDiary(initial: DiaryDocument[] = []) {
       return release;
     },
 
-    /** The next call of this kind (`'load'`, `'save'`) rejects with `error`, once. */
+    /** The next call of this kind (`'load'`, `'save'`, `'days'`) rejects with `error`, once. */
     failNext(call: Call, error: unknown): void {
       failures.set(call, [...(failures.get(call) ?? []), error]);
     },

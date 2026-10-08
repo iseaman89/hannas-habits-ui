@@ -46,6 +46,41 @@ describe('loading a day', () => {
   });
 });
 
+describe('listing the days of a range', () => {
+  it('asks for the range, both ends given, and returns the days as the server sent them', async () => {
+    const days = [
+      { date: '2026-10-01', mood: 5 },
+      { date: '2026-10-07', mood: null },
+    ];
+    const { gateway, requests } = gatewayFor(() => ({ status: 200, data: days }));
+
+    await expect(gateway.days({ from: '2026-01-01', to: '2026-12-31' })).resolves.toEqual(days);
+
+    expect(requests[0]).toMatchObject({
+      method: 'get',
+      url: '/daily-diaries',
+      params: { from: '2026-01-01', to: '2026-12-31' },
+    });
+  });
+
+  it('is an empty list for a range without entries (it is not a 404 there)', async () => {
+    const { gateway } = gatewayFor(() => ({ status: 200, data: [] }));
+
+    await expect(gateway.days({ from: '2020-01-01', to: '2020-12-31' })).resolves.toEqual([]);
+  });
+
+  it('lets a failure through - unlike a single day, a list has no "not found"', async () => {
+    const { gateway } = gatewayFor(() => ({
+      status: 404,
+      data: { title: 'Not Found', status: 404 },
+    }));
+
+    await expect(gateway.days({ from: '2026-01-01', to: '2026-12-31' })).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+});
+
 describe('saving a day', () => {
   it('puts the whole document to the date', async () => {
     const { gateway, requests } = gatewayFor(() => ({ status: 204 }));

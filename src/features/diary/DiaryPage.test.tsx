@@ -369,6 +369,37 @@ describe('autosave', () => {
   });
 });
 
+describe('the calendar’s lists of days', () => {
+  const YEAR = { from: '2026-01-01', to: '2026-12-31' };
+
+  it('are marked out of date once a write has gone through, so the calendar asks again', async () => {
+    const user = userEvent.setup();
+    const diary = fakeDiary();
+    const { queryClient } = renderPage(diary);
+    // The calendar looked at the year before: nothing written yet.
+    queryClient.setQueryData(diaryKeys.daysIn(YEAR), []);
+    expect(queryClient.getQueryState(diaryKeys.daysIn(YEAR))?.isInvalidated).toBe(false);
+
+    await user.type(await highlight(), 'A walk');
+    await screen.findByText('Saved', {}, { timeout: 3000 });
+
+    expect(queryClient.getQueryState(diaryKeys.daysIn(YEAR))?.isInvalidated).toBe(true);
+  });
+
+  it('stay as they are when the write failed - the server still has the old day', async () => {
+    const user = userEvent.setup();
+    const diary = fakeDiary();
+    diary.failNext('save', apiError(500));
+    const { queryClient } = renderPage(diary);
+    queryClient.setQueryData(diaryKeys.daysIn(YEAR), []);
+
+    await user.type(await highlight(), 'Keep me');
+    await screen.findByText('Not saved', {}, { timeout: 3000 });
+
+    expect(queryClient.getQueryState(diaryKeys.daysIn(YEAR))?.isInvalidated).toBe(false);
+  });
+});
+
 describe('after a log-out', () => {
   it('does not put the text of the person who left back into the emptied cache', async () => {
     const user = userEvent.setup();
