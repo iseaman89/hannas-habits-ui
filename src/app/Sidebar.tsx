@@ -62,8 +62,8 @@ export function Sidebar() {
   return (
     <aside className="flex items-center gap-2 rounded-card bg-surface p-2 shadow-md sm:gap-3 sm:p-3 lg:w-[15rem] lg:shrink-0 lg:flex-col lg:items-stretch lg:gap-6 lg:p-4">
       <Link to="/" className="flex min-w-0 items-center gap-2 rounded-full sm:gap-3">
-        <BrandMark firstName={user.firstName} className="size-8 text-base sm:size-11 sm:text-xl" />
-        {/* The service carries the person's name, and its first letter is the logo. */}
+        <BrandMark className="size-8 sm:size-11" />
+        {/* The service carries the person's name; the logo is the same for everybody. */}
         <span className="min-w-0 truncate font-display text-base leading-tight lg:text-card">
           {possessive(user.firstName)} <br className="hidden lg:inline" />
           Habits

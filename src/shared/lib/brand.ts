@@ -18,18 +18,6 @@ export function brandTitle(firstName: string): string {
   return `${possessive(firstName)} Habits`;
 }
 
-/**
- * The one letter the logo and the tab icon show: the first letter of the name, upper case.
- * Deliberately never two letters - an icon made of the name's and the service's initials would
- * be "HH" for Hanna's Habits, a code of the neo-Nazi scene ("Heil Hitler"), and other pairs have
- * such meanings too. (`ß` is upper-cased to "SS" by the language, hence the first character.)
- * Empty when the name has no letter at all.
- */
-export function brandInitial(firstName: string): string {
-  const letter = /\p{L}/u.exec(firstName)?.[0];
-  return letter ? (Array.from(letter.toLocaleUpperCase())[0] ?? '') : '';
-}
-
 export interface BrandStore {
   /** The first name the service carries on this browser. */
   name(): string;

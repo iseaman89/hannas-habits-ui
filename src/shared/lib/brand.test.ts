@@ -1,11 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  BRAND_NAME_KEY,
-  DEFAULT_BRAND_NAME,
-  brandInitial,
-  brandTitle,
-  createBrandStore,
-} from './brand';
+import { BRAND_NAME_KEY, DEFAULT_BRAND_NAME, brandTitle, createBrandStore } from './brand';
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data = new Map(Object.entries(initial));
@@ -35,31 +29,6 @@ describe('brandTitle', () => {
     expect(brandTitle('Hanna')).toBe("Hanna's Habits");
     expect(brandTitle('Yevgen')).toBe("Yevgen's Habits");
     expect(brandTitle('Hans')).toBe("Hans' Habits");
-  });
-});
-
-describe('brandInitial', () => {
-  it.each([
-    ['Hanna', 'H'],
-    ['yevgen', 'Y'],
-    ['élodie', 'É'],
-    ['  anna', 'A'],
-    ['Östen', 'Ö'],
-    ['ßa', 'S'], // "ß" would be "SS" in upper case; one letter, always
-    ['42 Anna', 'A'],
-  ])('%j -> %j', (name, initial) => {
-    expect(brandInitial(name)).toBe(initial);
-  });
-
-  it.each(['', '   ', '1234', '😀'])('is empty for %j, which has no letter', (name) => {
-    expect(brandInitial(name)).toBe('');
-  });
-
-  it('is one letter whatever the name: never an "HH" for Hanna’s Habits', () => {
-    for (const name of ['Hanna', 'Hans', 'Heidi', 'Hermann', 'Sophie', 'Simon', 'ßtefan']) {
-      expect(Array.from(brandInitial(name))).toHaveLength(1);
-    }
-    expect(brandInitial('Hanna')).toBe('H');
   });
 });
 

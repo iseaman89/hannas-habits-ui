@@ -71,12 +71,11 @@ describe('the app skeleton', () => {
     expect(screen.getByRole('link', { name: "Hanna's Habits" })).toHaveAttribute('href', '/');
   });
 
-  it('has the first letter of the name as its logo, one letter and not two', () => {
+  it('has the same logo whoever the service is named after', () => {
     renderApp({ ...signedIn, user: { ...testUser, firstName: 'Yevgen' } }, '/habits');
 
     const brandLink = screen.getByRole('link', { name: "Yevgen's Habits" });
-    // The circle (aria-hidden) says "Y"; the words follow it.
-    expect(brandLink.firstElementChild).toHaveTextContent(/^Y$/);
+    expect(brandLink.querySelector('img')).toHaveAttribute('src', '/favicon.svg');
   });
 
   it('gives a name that ends in s only the apostrophe', () => {

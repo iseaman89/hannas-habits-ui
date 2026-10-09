@@ -3,22 +3,18 @@ import { describe, expect, it } from 'vitest';
 import { BrandMark } from './BrandMark';
 
 describe('BrandMark', () => {
-  it('shows the first letter of the name, and only that', () => {
-    const { container } = render(<BrandMark firstName="Hanna" />);
+  it('is the one logo of the tab icon, the same for everybody', () => {
+    const { container } = render(<BrandMark className="size-11" />);
 
-    expect(container).toHaveTextContent(/^H$/);
+    const logo = container.querySelector('img');
+    expect(logo).toHaveAttribute('src', '/favicon.svg');
+    expect(logo).toHaveClass('size-11');
   });
 
   it('is decoration for a screen reader', () => {
-    const { container } = render(<BrandMark firstName="Yevgen" />);
+    const { container } = render(<BrandMark />);
 
-    expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
-  });
-
-  it('shows the tick for a name without a letter', () => {
-    const { container } = render(<BrandMark firstName="123" />);
-
-    expect(container).toHaveTextContent('');
-    expect(container.querySelector('svg')).not.toBeNull();
+    expect(container.querySelector('img')).toHaveAttribute('alt', '');
+    expect(container.querySelector('img')).toHaveAttribute('aria-hidden', 'true');
   });
 });
