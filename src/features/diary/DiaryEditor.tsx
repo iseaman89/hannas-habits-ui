@@ -7,9 +7,9 @@ import type { DiaryGateway } from './diaryGateway';
 import { diaryKeys } from './diaryQueries';
 import { DiaryHeader } from './DiaryHeader';
 import { EntryList } from './EntryList';
+import { DiaryGreeting } from './DiaryGreeting';
 import { HighlightCard } from './HighlightCard';
 import { MoodPicker } from './MoodPicker';
-import { ScaleCard } from './ScaleCard';
 import { TaskList } from './TaskList';
 import { useDayAutosave } from './useDayAutosave';
 
@@ -63,28 +63,19 @@ export function DiaryEditor({ date, day, initial, gateway, habitsGateway }: Diar
       <DiaryHeader day={day} status={status} onRetry={() => void saver.flush()} />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className="flex flex-col gap-6">
-          <MoodPicker value={draft.mood} onChange={(mood) => update({ mood })} />
-
-          <div className="grid gap-6 sm:grid-cols-2">
-            <ScaleCard
-              title="Body"
-              low="Drained"
-              high="Energised"
-              tone="accent-2"
-              value={draft.body}
-              onChange={(body) => update({ body })}
-            />
-            <ScaleCard
-              title="Mind"
-              low="Foggy"
-              high="Clear"
-              tone="accent"
-              value={draft.mind}
-              onChange={(mind) => update({ mind })}
+        {/* A container, not a screen, decides: this column is only two thirds of the page. */}
+        <div className="@container flex flex-col gap-6">
+          <div className="flex flex-col gap-6 @xl:flex-row @xl:items-center">
+            <DiaryGreeting day={day} className="@xl:flex-1" />
+            <MoodPicker
+              value={draft.mood}
+              onChange={(mood) => update({ mood })}
+              className="@xl:shrink-0"
             />
           </div>
 
+          {/* Body and Mind (0-100) are not on the screen for now - the `ScaleCard`s are kept. They
+              stay in the draft, so a day that has them is saved with them, not cleared. */}
           <HighlightCard value={draft.highlight} onChange={(highlight) => update({ highlight })} />
 
           <div className="grid gap-6 sm:grid-cols-2">

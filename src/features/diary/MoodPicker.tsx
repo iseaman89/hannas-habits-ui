@@ -9,6 +9,8 @@ interface MoodPickerProps {
   value: Mood | null;
   /** `null` = no mood. */
   onChange: (mood: Mood | null) => void;
+  /** For the card's place in the page (its width); the look is the picker's own. */
+  className?: string;
 }
 
 /**
@@ -16,12 +18,12 @@ interface MoodPickerProps {
  * their label), so the arrow keys, the group name and "selected" come from the browser. A radio
  * cannot be un-chosen by itself, hence the small clear button: a day may have no mood at all.
  */
-export function MoodPicker({ value, onChange }: MoodPickerProps) {
+export function MoodPicker({ value, onChange, className }: MoodPickerProps) {
   const name = useId();
   const chosen = MOODS.find((mood) => mood.value === value);
 
   return (
-    <Card>
+    <Card className={className}>
       <div className="flex items-center justify-between gap-3">
         <h2 id={`${name}-title`} className="font-display text-card">
           Mood

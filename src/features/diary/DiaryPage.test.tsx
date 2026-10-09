@@ -1,12 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthProvider } from '@/features/auth';
 import { ToastProvider } from '@/shared/ui';
 import { diaryDay, fakeDiary } from '@/test/fakeDiary';
 import { fakeHabits } from '@/test/fakeHabits';
 import { apiError } from '@/test/problems';
+import { fakeSession, signedIn } from '@/test/fakeSession';
 import { DiaryPage } from './DiaryPage';
 import { diaryKeys } from './diaryQueries';
 
@@ -28,15 +30,17 @@ function renderPage(
   render(
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <MemoryRouter initialEntries={[at]}>
-          <Routes>
-            <Route
-              path="/diary/:date"
-              element={<DiaryPage gateway={diary.gateway} habitsGateway={habits.gateway} />}
-            />
-          </Routes>
-          <LocationProbe />
-        </MemoryRouter>
+        <AuthProvider session={fakeSession(signedIn)}>
+          <MemoryRouter initialEntries={[at]}>
+            <Routes>
+              <Route
+                path="/diary/:date"
+                element={<DiaryPage gateway={diary.gateway} habitsGateway={habits.gateway} />}
+              />
+            </Routes>
+            <LocationProbe />
+          </MemoryRouter>
+        </AuthProvider>
       </ToastProvider>
     </QueryClientProvider>,
   );
@@ -110,13 +114,37 @@ describe('opening a day', () => {
 
     expect(await highlight()).toHaveValue('A long walk');
     expect(screen.getByRole('radio', { name: 'Good' })).toBeChecked();
-    expect(screen.getByText('70%')).toBeInTheDocument();
-    expect(screen.getByText('0%')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Grateful for 1' })).toHaveValue('Sun');
     expect(screen.getByRole('textbox', { name: 'Something I learnt 1' })).toHaveValue('Lifetimes');
     expect(screen.getByRole('checkbox', { name: 'Done: Call mum' })).toBeChecked();
     // Opening a day does not write it.
     expect(diary.calls.save).toEqual([]);
+  });
+
+  it('does not offer Body and Mind', async () => {
+    renderPage(fakeDiary([diaryDay('2026-10-07', { body: 70, mind: 0 })]));
+    await highlight();
+
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Body' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Mind' })).not.toBeInTheDocument();
+  });
+
+  it('greets the person by name and asks how they feel today', async () => {
+    renderPage(fakeDiary());
+    await highlight();
+
+    expect(screen.getByText('Hi, Hanna')).toBeInTheDocument();
+    expect(screen.getByText('How are you feeling today?')).toBeInTheDocument();
+  });
+
+  it('asks about the past on another day than today', async () => {
+    renderPage(fakeDiary(), '/diary/2026-10-05');
+    await highlight();
+
+    expect(screen.getByText('Hi, Hanna')).toBeInTheDocument();
+    expect(screen.getByText('How were you feeling on this day?')).toBeInTheDocument();
+    expect(screen.queryByText('How are you feeling today?')).not.toBeInTheDocument();
   });
 
   it('sends a date that is not a real day to today', async () => {
@@ -242,19 +270,13 @@ describe('autosave', () => {
     expect(diary.dayOf('2026-10-07')?.highlight).toBe('A long walk in the park');
   });
 
-  it('keeps every field in the one document: a mood, the sliders, lines and a task together', async () => {
+  it('keeps every field in the one document: a mood, lines and a task together', async () => {
     const user = userEvent.setup();
     const diary = fakeDiary();
     renderPage(diary);
     await highlight();
 
     await user.click(screen.getByRole('radio', { name: 'Great' }));
-    fireEvent.change(screen.getByRole('slider', { name: 'Body: Drained to Energised' }), {
-      target: { value: '70' },
-    });
-    fireEvent.change(screen.getByRole('slider', { name: 'Mind: Foggy to Clear' }), {
-      target: { value: '0' },
-    });
     await user.type(
       screen.getByRole('textbox', { name: 'Add something you are grateful for' }),
       'Sun{Enter}',
@@ -275,13 +297,27 @@ describe('autosave', () => {
     expect(diary.dayOf('2026-10-07')).toEqual(
       diaryDay('2026-10-07', {
         mood: 5,
-        body: 70,
-        mind: 0,
         grateful: ['Sun'],
         learned: ['Types'],
         tasks: [{ title: 'Call mum', done: true }],
       }),
     );
+  });
+
+  it('writes the Body and Mind of a day back unchanged although the screen does not show them', async () => {
+    const user = userEvent.setup();
+    const diary = fakeDiary([diaryDay('2026-10-07', { mood: 4, body: 70, mind: 0 })]);
+    renderPage(diary);
+
+    await user.type(await highlight(), 'A walk');
+
+    await waitFor(() => expect(diary.calls.save).toHaveLength(1), { timeout: 3000 });
+    expect(diary.calls.save[0]?.request).toMatchObject({
+      mood: 4,
+      body: 70,
+      mind: 0,
+      highlight: 'A walk',
+    });
   });
 
   it('removes the entry when everything is cleared again (an empty document)', async () => {

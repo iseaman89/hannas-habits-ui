@@ -17,6 +17,9 @@ interface ScaleCardProps {
  * A 0-100 slider with the number big beside it (Body, Mind). "Not set" is a state of its own -
  * a day can be just a highlight - so an untouched slider rests at the middle, dimmed, and says
  * "-" instead of a number nobody chose; the clear button takes a chosen value back.
+ *
+ * Not on the diary screen at the moment (switched off, not removed): the day's `body` and `mind`
+ * still travel in the draft and the API; put the two cards back in `DiaryEditor` to show them.
  */
 export function ScaleCard({ title, low, high, value, onChange, tone }: ScaleCardProps) {
   return (

@@ -3,11 +3,13 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthProvider } from '@/features/auth';
 import { DiaryPage } from '@/features/diary';
 import { ToastProvider } from '@/shared/ui';
 import { diaryDay, fakeDiary } from '@/test/fakeDiary';
 import { fakeHabits } from '@/test/fakeHabits';
 import { apiError } from '@/test/problems';
+import { fakeSession, signedIn } from '@/test/fakeSession';
 import { CalendarPage } from './CalendarPage';
 
 // Wednesday 7 October 2026, around noon: the client's "today" in every test.
@@ -439,16 +441,18 @@ describe('together with the diary', () => {
     render(
       <QueryClientProvider client={newQueryClient()}>
         <ToastProvider>
-          <MemoryRouter initialEntries={['/calendar']}>
-            <Link to="/calendar">Back to the calendar</Link>
-            <Routes>
-              <Route path="/calendar" element={<CalendarPage gateway={diary.gateway} />} />
-              <Route
-                path="/diary/:date"
-                element={<DiaryPage gateway={diary.gateway} habitsGateway={habits.gateway} />}
-              />
-            </Routes>
-          </MemoryRouter>
+          <AuthProvider session={fakeSession(signedIn)}>
+            <MemoryRouter initialEntries={['/calendar']}>
+              <Link to="/calendar">Back to the calendar</Link>
+              <Routes>
+                <Route path="/calendar" element={<CalendarPage gateway={diary.gateway} />} />
+                <Route
+                  path="/diary/:date"
+                  element={<DiaryPage gateway={diary.gateway} habitsGateway={habits.gateway} />}
+                />
+              </Routes>
+            </MemoryRouter>
+          </AuthProvider>
         </ToastProvider>
       </QueryClientProvider>,
     );
