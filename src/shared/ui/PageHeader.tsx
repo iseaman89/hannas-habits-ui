@@ -13,9 +13,9 @@ interface PageHeaderProps {
   /** More that belongs to the top of the screen, e.g. the calendar's colour legend. */
   below?: ReactNode;
   /**
-   * Keeps the header (and `below`) at the top of the screen while the page scrolls under it. Only
-   * for a screen inside `AppShell`: it takes the shell's top spacing (`--page-top`) into itself,
-   * so that nothing jumps when it sticks.
+   * Keeps the header (and `below`) at the top of the screen while the page scrolls under it. For
+   * a screen inside `AppShell`, whose `main` has no spacing above it: the header sits at the very
+   * top, at rest and while scrolling, so it never moves.
    */
   pinned?: boolean;
   className?: string;
@@ -76,11 +76,11 @@ export function PageHeader({
     <div
       className={cn(
         pinned &&
-          // Opaque, above the page's cards (z-20: the grid's own sticky names are z-10), reaching up
-          // into the shell's top spacing so that it sits flush at the top once stuck. The negative
-          // bottom margin takes back its own padding: the layout below does not move. The fade
-          // softens the edge where the page passes under it.
-          'sticky top-0 z-20 -mb-2 -mt-(--page-top) bg-bg pb-2 pt-(--page-top) after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-4 after:bg-linear-to-b after:from-bg after:to-transparent',
+          // Completely opaque - the page passes under it with a hard edge, nothing shines through -
+          // and above the page's cards (z-20: the grid's own sticky names are z-10). Its padding
+          // below keeps the page's cards from touching the text; the negative bottom margin takes
+          // that padding back, so the layout below does not move.
+          'sticky top-0 z-20 -mb-2 bg-bg pb-2',
       )}
     >
       {header}
