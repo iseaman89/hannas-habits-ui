@@ -34,6 +34,15 @@ function renderShell(at: string) {
 }
 
 describe('AppShell', () => {
+  it('is the containing block of the text only screen readers get (sr-only is absolutely positioned)', () => {
+    renderShell('/habits');
+
+    // Without a positioned `main`, such text far to the right or far down is not clipped by its
+    // scrolling and makes the whole page wider or taller than the screen (the bottom bar then
+    // stretches with it). jsdom lays nothing out, so the class is what can be pinned here.
+    expect(screen.getByRole('main')).toHaveClass('relative');
+  });
+
   it('starts with a skip link that moves the focus into the screen without touching the address', async () => {
     const router = renderShell('/habits');
 

@@ -53,19 +53,45 @@ describe('MoodPicker', () => {
     expect(mood()).toBe('4');
   });
 
-  it('can take the chosen mood back, because a day may have no mood', async () => {
+  it('takes the chosen mood back when the chosen face is chosen again, because a day may have no mood', async () => {
     const user = userEvent.setup();
     render(<Harness initial={3} />);
 
     expect(screen.getByRole('radio', { name: 'Okay' })).toBeChecked();
 
-    await user.click(screen.getByRole('button', { name: 'Clear mood' }));
+    await user.click(screen.getByRole('radio', { name: 'Okay' }));
 
     expect(mood()).toBe('null');
-    expect(screen.queryByRole('button', { name: 'Clear mood' })).not.toBeInTheDocument();
     expect(
       screen.getAllByRole('radio').every((radio) => !(radio as HTMLInputElement).checked),
     ).toBe(true);
+  });
+
+  it('clears with the space bar too, on the chosen face', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={4} />);
+
+    screen.getByRole('radio', { name: 'Good' }).focus();
+    await user.keyboard(' ');
+
+    expect(mood()).toBe('null');
+  });
+
+  it('a click on another face changes the mood and does not clear it', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={4} />);
+
+    await user.click(screen.getByRole('radio', { name: 'Okay' }));
+
+    expect(mood()).toBe('3');
+  });
+
+  it('tells a screen reader how to clear, and has no button for it', () => {
+    render(<Harness initial={4} />);
+
+    const group = screen.getByRole('radiogroup', { name: 'Mood' });
+    expect(group).toHaveAccessibleDescription('Choose the chosen mood again to clear it.');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
   it('shows only the faces: no title and no word for the chosen one', () => {

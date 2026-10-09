@@ -324,7 +324,7 @@ describe('autosave', () => {
     renderPage(diary);
     await highlight();
 
-    await user.click(screen.getByRole('button', { name: 'Clear mood' }));
+    await user.click(screen.getByRole('radio', { name: 'Low' })); // the chosen face again: no mood
 
     await waitFor(() => expect(diary.calls.save).toHaveLength(1), { timeout: 3000 });
     expect(diary.calls.save[0]?.request).toMatchObject({ mood: null, highlight: null, tasks: [] });

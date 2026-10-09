@@ -57,8 +57,10 @@ export function HabitGrid({ habits, month, today, onToggle, onEdit, onDelete }: 
     // person's own scrolling must not be undone by a tick.
   }, [monthKey, today]);
 
+  // `relative`: the day names for screen readers (`sr-only`, absolutely positioned) must be
+  // clipped and scrolled with the table; see AppShell.
   return (
-    <div ref={scroller} className="overflow-x-auto">
+    <div ref={scroller} className="relative overflow-x-auto">
       <table className="w-full min-w-[66rem] border-separate border-spacing-0">
         <caption className="sr-only">Habits in {format(month, 'MMMM yyyy')}</caption>
         <thead>

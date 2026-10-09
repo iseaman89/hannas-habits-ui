@@ -95,6 +95,14 @@ describe('HabitGrid', () => {
     expect(screen.getAllByRole('columnheader')).toHaveLength(days + 2);
   });
 
+  it('keeps the day names for screen readers inside its own scrolling', () => {
+    renderGrid();
+
+    // They are `sr-only` (absolutely positioned): without a positioned scroller they would not be
+    // clipped, and a column at the far right would make the whole page wider than a phone.
+    expect(screen.getByRole('table').parentElement).toHaveClass('relative', 'overflow-x-auto');
+  });
+
   it('names the table by its month', () => {
     renderGrid();
 
