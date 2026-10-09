@@ -108,4 +108,3 @@ Dependencies point inwards: `app` → `features` → `shared`; a feature never i
 **Yevgen Panych** – Umschüler zum Fachinformatiker AE  
 
 📫 [LinkedIn](https://www.linkedin.com/in/yevgen-panych)  
-🌐 [Portfolio](https://panych.site)
