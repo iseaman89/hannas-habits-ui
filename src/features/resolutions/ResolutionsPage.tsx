@@ -126,6 +126,7 @@ export function ResolutionsPage({
   return (
     <>
       <PageHeader
+        pinned
         kicker="Resolutions"
         title={`My ${year}`}
         actions={

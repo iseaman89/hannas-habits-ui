@@ -86,8 +86,10 @@ export function CalendarPage({ gateway = diaryGateway }: { gateway?: DiaryGatewa
   return (
     <>
       <PageHeader
+        pinned
         kicker="Calendar"
         title={year}
+        below={<MoodLegend />}
         actions={
           <>
             {year !== currentYear && (
@@ -116,10 +118,7 @@ export function CalendarPage({ gateway = diaryGateway }: { gateway?: DiaryGatewa
         }
       />
 
-      <div className="mt-6 flex flex-col gap-6">
-        <MoodLegend />
-        {renderBody()}
-      </div>
+      <div className="mt-6 flex flex-col gap-6">{renderBody()}</div>
     </>
   );
 }

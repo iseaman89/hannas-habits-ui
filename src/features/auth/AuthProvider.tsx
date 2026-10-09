@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { brand } from '@/shared/lib/brand';
 import { useToast } from '@/shared/ui';
 import { AuthContext, type AuthApi } from './auth-context';
 import type { Session } from './session';
@@ -32,6 +33,13 @@ export function AuthProvider({ session, children }: AuthProviderProps) {
   useEffect(() => {
     return () => queryClient.clear();
   }, [userId, queryClient]);
+
+  // The service is named after whoever signed in last ("Yevgen's Habits"), also on the login page
+  // after a log-out; see shared/lib/brand.ts for what is kept and why.
+  const firstName = state.user?.firstName;
+  useEffect(() => {
+    if (firstName) brand.remember(firstName);
+  }, [firstName]);
 
   // The browser says the network is back: a screen that is waiting for the server tries again
   // by itself instead of making the person press a button.

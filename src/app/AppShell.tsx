@@ -18,6 +18,10 @@ function screenOf(pathname: string): string {
  * habit grid) or far down made the page itself wider or taller than the screen: empty space on the
  * right and below, and the fixed bottom bar stretched to the wider page.
  *
+ * The top spacing of `main` is the variable `--page-top`: a pinned `PageHeader` takes it into itself
+ * (negative margin, same padding) and so sticks flush at the top without a jump. `scroll-pt-32`
+ * keeps a focused control from ending up under it.
+ *
  * For keyboard and screen-reader users: a "Skip to content" link as the first stop, and when the
  * person goes to another *screen* (not to another day or month of the same one - their focus is
  * on the button they are paging with) the focus moves to the new screen, which a page load would
@@ -52,7 +56,7 @@ export function AppShell() {
         id="main"
         ref={main}
         tabIndex={-1}
-        className="relative min-w-0 flex-1 overflow-y-auto px-1 pb-24 pt-2 outline-none sm:px-4 lg:px-10 lg:py-9"
+        className="relative min-w-0 flex-1 scroll-pt-32 overflow-y-auto px-1 pb-24 pt-(--page-top) outline-none [--page-top:0.5rem] sm:px-4 lg:px-10 lg:pb-9 lg:[--page-top:2.25rem]"
       >
         <Outlet />
       </main>

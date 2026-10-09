@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, type Session } from '@/features/auth';
+import { useBrandIcon } from '@/shared/lib/useBrandIcon';
 import { ThemeProvider, ToastProvider } from '@/shared/ui';
 import { createQueryClient } from './queryClient';
 
@@ -12,6 +13,7 @@ import { createQueryClient } from './queryClient';
  */
 export function AppProviders({ session, children }: { session: Session; children: ReactNode }) {
   const [queryClient] = useState(createQueryClient);
+  useBrandIcon();
 
   return (
     <ThemeProvider>

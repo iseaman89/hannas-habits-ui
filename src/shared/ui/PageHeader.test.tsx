@@ -19,6 +19,25 @@ describe('PageHeader', () => {
     expect(screen.getByRole('button', { name: 'New habit' })).toBeInTheDocument();
   });
 
+  it('can stay at the top of the screen, together with what belongs to its top part', () => {
+    const { container } = render(
+      <PageHeader pinned kicker="Calendar" title={2026} below={<p>Legend</p>} />,
+    );
+
+    const pinned = container.firstElementChild;
+    expect(pinned).toHaveClass('sticky', 'top-0');
+    // The legend is part of what stays, the heading is still the page's one h1.
+    expect(pinned).toContainElement(screen.getByText('Legend'));
+    expect(pinned).toContainElement(screen.getByRole('heading', { level: 1 }));
+  });
+
+  it('is not pinned unless asked to (the start-up page has no scrolling shell around it)', () => {
+    const { container } = render(<PageHeader kicker="Habits" title="October 2026" />);
+
+    expect(container.firstElementChild?.tagName).toBe('HEADER');
+    expect(container.querySelector('.sticky')).toBeNull();
+  });
+
   it('names the screen in the browser tab, and puts the app name back when it goes', () => {
     const { unmount } = render(<PageHeader kicker="Habits" title="October 2026" />);
     expect(document.title).toBe("October 2026 · Habits · Hanna's Habits");

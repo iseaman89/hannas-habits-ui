@@ -1,6 +1,8 @@
 import { render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { APP_NAME, documentTitle, useDocumentTitle } from './documentTitle';
+import { act } from 'react';
+import { brand } from './brand';
+import { documentTitle, useDocumentTitle } from './documentTitle';
 
 function Screen({ title }: { title: string | null }) {
   useDocumentTitle(title);
@@ -9,6 +11,7 @@ function Screen({ title }: { title: string | null }) {
 
 afterEach(() => {
   document.title = '';
+  localStorage.clear();
 });
 
 describe('documentTitle', () => {
@@ -17,7 +20,7 @@ describe('documentTitle', () => {
   });
 
   it.each([null, ''])('is the app name alone for %j', (title) => {
-    expect(documentTitle(title)).toBe(APP_NAME);
+    expect(documentTitle(title)).toBe("Hanna's Habits");
   });
 });
 
@@ -30,6 +33,16 @@ describe('useDocumentTitle', () => {
     expect(document.title).toBe("Calendar · Hanna's Habits");
 
     unmount();
-    expect(document.title).toBe(APP_NAME);
+    expect(document.title).toBe("Hanna's Habits");
+  });
+
+  it('names the service after whoever signed in on this browser, now and later', () => {
+    render(<Screen title="Habits" />);
+    expect(document.title).toBe("Habits · Hanna's Habits");
+
+    act(() => brand.remember('Yevgen'));
+
+    expect(document.title).toBe("Habits · Yevgen's Habits");
+    expect(documentTitle(null)).toBe("Yevgen's Habits");
   });
 });

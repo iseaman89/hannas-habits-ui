@@ -10,6 +10,14 @@ interface PageHeaderProps {
   status?: ReactNode;
   /** Right-aligned buttons. */
   actions?: ReactNode;
+  /** More that belongs to the top of the screen, e.g. the calendar's colour legend. */
+  below?: ReactNode;
+  /**
+   * Keeps the header (and `below`) at the top of the screen while the page scrolls under it. Only
+   * for a screen inside `AppShell`: it takes the shell's top spacing (`--page-top`) into itself,
+   * so that nothing jumps when it sticks.
+   */
+  pinned?: boolean;
   className?: string;
 }
 
@@ -22,12 +30,20 @@ interface PageHeaderProps {
  * one grid. From `sm` on it is the roomy layout: the title with its status after it, the
  * buttons on the far right.
  */
-export function PageHeader({ kicker, title, status, actions, className }: PageHeaderProps) {
+export function PageHeader({
+  kicker,
+  title,
+  status,
+  actions,
+  below,
+  pinned,
+  className,
+}: PageHeaderProps) {
   useDocumentTitle(
     typeof title === 'string' || typeof title === 'number' ? `${title} · ${kicker}` : null,
   );
 
-  return (
+  const header = (
     <header
       className={cn(
         'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1',
@@ -52,5 +68,23 @@ export function PageHeader({ kicker, title, status, actions, className }: PageHe
         </div>
       )}
     </header>
+  );
+
+  if (!pinned && !below) return header;
+
+  return (
+    <div
+      className={cn(
+        pinned &&
+          // Opaque, above the page's cards (z-20: the grid's own sticky names are z-10), reaching up
+          // into the shell's top spacing so that it sits flush at the top once stuck. The negative
+          // bottom margin takes back its own padding: the layout below does not move. The fade
+          // softens the edge where the page passes under it.
+          'sticky top-0 z-20 -mb-2 -mt-(--page-top) bg-bg pb-2 pt-(--page-top) after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-4 after:bg-linear-to-b after:from-bg after:to-transparent',
+      )}
+    >
+      {header}
+      {below && <div className="mt-4">{below}</div>}
+    </div>
   );
 }

@@ -108,6 +108,7 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
   return (
     <>
       <PageHeader
+        pinned
         kicker="Habits"
         title={format(month, 'MMMM yyyy')}
         actions={

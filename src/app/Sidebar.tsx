@@ -1,9 +1,9 @@
 import { Link, useMatch } from 'react-router-dom';
-import { Calendar, Check, ListChecks, LogOut, Sun, Target, type LucideIcon } from 'lucide-react';
+import { Calendar, ListChecks, LogOut, Sun, Target, type LucideIcon } from 'lucide-react';
 import { useAuth, useUser } from '@/features/auth';
 import { cn } from '@/shared/lib/cn';
 import { possessive } from '@/shared/lib/possessive';
-import { IconButton, ThemeSwitch, useTheme } from '@/shared/ui';
+import { BrandMark, IconButton, ThemeSwitch, useTheme } from '@/shared/ui';
 
 interface NavEntry {
   to: string;
@@ -62,10 +62,8 @@ export function Sidebar() {
   return (
     <aside className="flex items-center gap-2 rounded-card bg-surface p-2 shadow-md sm:gap-3 sm:p-3 lg:w-[15rem] lg:shrink-0 lg:flex-col lg:items-stretch lg:gap-6 lg:p-4">
       <Link to="/" className="flex min-w-0 items-center gap-2 rounded-full sm:gap-3">
-        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-accent-2 text-bg sm:size-11">
-          <Check className="size-4 sm:size-6" aria-hidden />
-        </span>
-        {/* The service carries the person's name: "Hanna's Habits" is Hanna's. */}
+        <BrandMark firstName={user.firstName} className="size-8 text-base sm:size-11 sm:text-xl" />
+        {/* The service carries the person's name, and its first letter is the logo. */}
         <span className="min-w-0 truncate font-display text-base leading-tight lg:text-card">
           {possessive(user.firstName)} <br className="hidden lg:inline" />
           Habits

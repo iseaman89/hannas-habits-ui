@@ -1,8 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { ApiError } from '@/shared/api';
+import { brand } from '@/shared/lib/brand';
 import { ThemeProvider, ToastProvider } from '@/shared/ui';
 import { fakeSession, signedOut } from '@/test/fakeSession';
 import { AuthProvider } from './AuthProvider';
@@ -118,6 +119,28 @@ async function fillLogin(user: ReturnType<typeof userEvent.setup>, email = 'hann
   await user.type(emailField(), email);
   await user.type(passwordField(), 'Secret-123');
 }
+
+describe('LoginPage: the name of the service', () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('is Hanna’s for somebody who has never signed in here', () => {
+    setup();
+
+    expect(screen.getByRole('heading', { level: 1, name: "Hanna's Habits" })).toBeInTheDocument();
+    expect(document.title).toBe("Log in · Hanna's Habits");
+  });
+
+  it('is the remembered person’s on the login page after a log-out', () => {
+    brand.remember('Yevgen');
+
+    setup();
+
+    expect(screen.getByRole('heading', { level: 1, name: "Yevgen's Habits" })).toBeInTheDocument();
+    expect(document.title).toBe("Log in · Yevgen's Habits");
+  });
+});
 
 describe('LoginPage: log in', () => {
   it('starts with the login form', () => {

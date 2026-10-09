@@ -1,6 +1,8 @@
 import { useState, type ComponentType } from 'react';
 import { errorMessage } from '@/shared/api';
+import { brandTitle } from '@/shared/lib/brand';
 import { useDocumentTitle } from '@/shared/lib/documentTitle';
+import { useBrandName } from '@/shared/lib/useBrand';
 import { Button, Card, FormMessage, Tag, ThemeSwitch, useTheme } from '@/shared/ui';
 import { authGateway, type AuthGateway } from './authGateway';
 import { GoogleSection, type GoogleSectionProps } from './GoogleSection';
@@ -31,6 +33,8 @@ export function LoginPage({ gateway = authGateway, GoogleButton = GoogleSection 
   const authentication = useAuthentication(gateway);
   const { busy } = authentication;
   useDocumentTitle(mode === 'login' ? 'Log in' : 'Create account');
+  // Named after whoever signed in on this browser last, also after a log-out; "Hanna" before anybody did.
+  const brandName = useBrandName();
 
   function switchMode() {
     setGoogleMessage(null);
@@ -67,7 +71,7 @@ export function LoginPage({ gateway = authGateway, GoogleButton = GoogleSection 
           className="pointer-events-none absolute bottom-40 left-1/3 size-6 rounded-full bg-accent-2-500"
         />
         <h1 className="relative font-display text-[clamp(3rem,7vw,5.5rem)] leading-[1.05] tracking-tight">
-          Hanna&apos;s Habits
+          {brandTitle(brandName)}
         </h1>
         <p className="relative max-w-md text-lg text-neutral-800">
           Daily reflections, habits, and goals in one place.

@@ -26,6 +26,7 @@ export function DiaryHeader({ day, status, onRetry }: DiaryHeaderProps) {
 
   return (
     <PageHeader
+      pinned
       kicker="Daily diary"
       title={dayTitle(day, today)}
       status={status && <SavedIndicator status={status} onRetry={onRetry ?? (() => undefined)} />}

@@ -1,7 +1,8 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { brand } from '@/shared/lib/brand';
 import { ToastProvider } from '@/shared/ui';
 import { fakeSession, restoring, signedIn, signedOut, testUser } from '@/test/fakeSession';
 import { AuthProvider } from './AuthProvider';
@@ -33,6 +34,10 @@ function setup(initial = signedOut) {
   return { session, queryClient };
 }
 
+afterEach(() => {
+  localStorage.clear();
+});
+
 describe('AuthProvider', () => {
   it('shows the state of the session and follows its changes', () => {
     const { session } = setup(restoring);
@@ -57,6 +62,27 @@ describe('AuthProvider', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
 
     expect(session.endCalls).toBe(1);
+  });
+
+  describe('the name the service carries', () => {
+    it('is the first name of whoever signs in, and stays after the log-out', () => {
+      const { session } = setup(signedOut);
+      expect(brand.name()).toBe('Hanna'); // nobody yet: the default
+
+      act(() => session.set({ ...signedIn, user: { ...testUser, firstName: 'Yevgen' } }));
+      expect(brand.name()).toBe('Yevgen');
+
+      act(() => session.set(signedOut));
+      expect(brand.name()).toBe('Yevgen');
+    });
+
+    it('is the newest person’s when somebody else signs in', () => {
+      const { session } = setup(signedIn);
+
+      act(() => session.set({ ...signedIn, user: { ...testUser, id: 'u-2', firstName: 'Anna' } }));
+
+      expect(brand.name()).toBe('Anna');
+    });
   });
 
   describe('cached server data', () => {

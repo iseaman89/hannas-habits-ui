@@ -1,3 +1,5 @@
+import { brandTitle } from '@/shared/lib/brand';
+import { useBrandName } from '@/shared/lib/useBrand';
 import { Card, PageHeader } from '@/shared/ui';
 
 interface StartupErrorProps {
@@ -14,9 +16,11 @@ interface StartupErrorProps {
  * would otherwise be a blank page and an error in the console only).
  */
 export function StartupError({ title, problems, hint }: StartupErrorProps) {
+  const brandName = useBrandName();
+
   return (
     <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-6 p-6">
-      <PageHeader kicker="Hanna's Habits" title={title} />
+      <PageHeader kicker={brandTitle(brandName)} title={title} />
       <Card role="alert" className="flex flex-col gap-4">
         <ul className="flex list-disc flex-col gap-2 pl-5">
           {problems.map((problem) => (
