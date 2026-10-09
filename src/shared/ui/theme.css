@@ -1,0 +1,262 @@
+/*
+ * Design tokens of the "Organic" design (docs/DESIGN.md §2 in the backend repo).
+ *
+ * How the theme works
+ *  - The three colour ramps are written down once, in light order, as plain variables
+ *    (--ramp-*). They are not Tailwind tokens, so no utility can bypass the theme switch.
+ *  - The Tailwind tokens (--color-*) point at them. In dark mode the ramp tokens point at the
+ *    mirrored step (n -> 1000 - n): the dark ramps are the light ramps reversed, so a component
+ *    written with `bg-accent-200 text-accent-800` is a light tint in light mode and a dark tint
+ *    in dark mode, without a single `dark:` utility.
+ *  - `data-theme="light|dark"` on <html> switches everything (see shared/lib/theme.ts).
+ *
+ * `@theme static` emits every token even when no class uses it, so inline styles and `var()`
+ * in plain CSS can always rely on them.
+ *
+ * `--color-*: initial` drops Tailwind's default palette (red-500, white, black ...): only the
+ * design's colours exist, so a stray `bg-white` generates nothing instead of a colour that
+ * ignores the theme switch.
+ */
+
+:root {
+  --ramp-neutral-100: #f9f4ed;
+  --ramp-neutral-200: #eee7db;
+  --ramp-neutral-300: #dcd3c4;
+  --ramp-neutral-400: #c0b6a5;
+  --ramp-neutral-500: #a19786;
+  --ramp-neutral-600: #82796a;
+  --ramp-neutral-700: #645c50;
+  --ramp-neutral-800: #474238;
+  --ramp-neutral-900: #2e2b25;
+
+  --ramp-accent-100: #fff2eb;
+  --ramp-accent-200: #ffe1d0;
+  --ramp-accent-300: #ffc6a5;
+  --ramp-accent-400: #f6a06b;
+  --ramp-accent-500: #d67f48;
+  --ramp-accent-600: #b2622d;
+  --ramp-accent-700: #8c491a;
+  --ramp-accent-800: #643312;
+  --ramp-accent-900: #402310;
+
+  --ramp-accent-2-100: #f0fae1;
+  --ramp-accent-2-200: #e1eecc;
+  --ramp-accent-2-300: #ccdbb2;
+  --ramp-accent-2-400: #aebf92;
+  --ramp-accent-2-500: #8fa073;
+  --ramp-accent-2-600: #728157;
+  --ramp-accent-2-700: #56633f;
+  --ramp-accent-2-800: #3d472b;
+  --ramp-accent-2-900: #272e1b;
+
+  color-scheme: light;
+}
+
+@theme static {
+  --color-*: initial;
+
+  /* Roles. `accent` (terracotta) and `accent-2` (sage) are not simply ramp step 500 in light. */
+  --color-bg: #f5ead8;
+  --color-surface: #ebddc5;
+  --color-text: #201e1d;
+  --color-accent: #c67139;
+  --color-accent-2: #7a8a5e;
+  --color-divider: color-mix(in srgb, var(--color-text) 16%, transparent);
+  /* Pressed/hover steps of the primary button: one step further along the ramp. */
+  --color-accent-hover: var(--color-accent-600);
+  --color-accent-pressed: var(--color-accent-700);
+  /* Behind a modal dialog. */
+  --color-backdrop: color-mix(in srgb, var(--ramp-neutral-900) 45%, transparent);
+
+  --color-neutral-100: var(--ramp-neutral-100);
+  --color-neutral-200: var(--ramp-neutral-200);
+  --color-neutral-300: var(--ramp-neutral-300);
+  --color-neutral-400: var(--ramp-neutral-400);
+  --color-neutral-500: var(--ramp-neutral-500);
+  --color-neutral-600: var(--ramp-neutral-600);
+  --color-neutral-700: var(--ramp-neutral-700);
+  --color-neutral-800: var(--ramp-neutral-800);
+  --color-neutral-900: var(--ramp-neutral-900);
+
+  --color-accent-100: var(--ramp-accent-100);
+  --color-accent-200: var(--ramp-accent-200);
+  --color-accent-300: var(--ramp-accent-300);
+  --color-accent-400: var(--ramp-accent-400);
+  --color-accent-500: var(--ramp-accent-500);
+  --color-accent-600: var(--ramp-accent-600);
+  --color-accent-700: var(--ramp-accent-700);
+  --color-accent-800: var(--ramp-accent-800);
+  --color-accent-900: var(--ramp-accent-900);
+
+  --color-accent-2-100: var(--ramp-accent-2-100);
+  --color-accent-2-200: var(--ramp-accent-2-200);
+  --color-accent-2-300: var(--ramp-accent-2-300);
+  --color-accent-2-400: var(--ramp-accent-2-400);
+  --color-accent-2-500: var(--ramp-accent-2-500);
+  --color-accent-2-600: var(--ramp-accent-2-600);
+  --color-accent-2-700: var(--ramp-accent-2-700);
+  --color-accent-2-800: var(--ramp-accent-2-800);
+  --color-accent-2-900: var(--ramp-accent-2-900);
+
+  /* Mood scale (calendar days + mood picker), named for what it means. The mockup indexed it
+     0..4 from Great to Rough (--hh-m0..m4 / --hh-f0..f4); the API counts the other way round
+     (5 = Great), so names avoid an index flip. `on-*` is the text colour on that fill. */
+  --color-mood-great: var(--ramp-accent-2-600);
+  --color-on-mood-great: var(--color-bg);
+  --color-mood-good: var(--ramp-accent-2-300);
+  --color-on-mood-good: var(--ramp-accent-2-900);
+  --color-mood-okay: var(--ramp-neutral-300);
+  --color-on-mood-okay: var(--ramp-neutral-900);
+  --color-mood-low: var(--ramp-accent-300);
+  --color-on-mood-low: var(--ramp-accent-900);
+  --color-mood-rough: var(--ramp-accent-500);
+  --color-on-mood-rough: var(--color-bg);
+
+  /* A scheduled, past, not completed habit cell. */
+  --color-miss: var(--ramp-accent-200);
+
+  --font-sans: 'Figtree Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Caprasimo', ui-serif, Georgia, serif;
+
+  /* 1.10x density: one step is 4.4px, so p-1/2/3/4/6/8 = 4.4 / 8.8 / 13.2 / 17.6 / 26.4 / 35.2px
+     (the design's space-1,2,3,4,6,8). */
+  --spacing: 0.275rem;
+
+  --text-kicker: 0.75rem;
+  --text-card: 1.125rem;
+  --text-dialog: 1.625rem;
+  --text-page: 2.75rem;
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+  /* Cards and dialogs: radius-lg x 1.15 (the sidebar uses it too). */
+  --radius-card: 32px;
+
+  --shadow-sm: 0 1px 2px color-mix(in srgb, var(--ramp-neutral-900) 14%, transparent);
+  --shadow-md: 0 3px 10px color-mix(in srgb, var(--ramp-neutral-900) 16%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, var(--ramp-neutral-900) 22%, transparent);
+
+  --animate-toast-in: toast-in 0.25s ease-out;
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Dark: roles are redefined, the ramps are mirrored (step n shows light step 1000 - n). */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #1d1a17;
+  --color-surface: #2a2520;
+  --color-text: #f3e8d6;
+  --color-accent: #d67f48;
+  --color-accent-2: #8fa073;
+  --color-divider: color-mix(in srgb, var(--color-text) 18%, transparent);
+  /* Hover goes to ramp step 400 here (= the same colour as step 600 in light mode). */
+  --color-accent-hover: var(--color-accent-400);
+  --color-accent-pressed: var(--color-accent-300);
+  --color-backdrop: rgb(0 0 0 / 0.55);
+
+  --color-neutral-100: var(--ramp-neutral-900);
+  --color-neutral-200: var(--ramp-neutral-800);
+  --color-neutral-300: var(--ramp-neutral-700);
+  --color-neutral-400: var(--ramp-neutral-600);
+  --color-neutral-500: var(--ramp-neutral-500);
+  --color-neutral-600: var(--ramp-neutral-400);
+  --color-neutral-700: var(--ramp-neutral-300);
+  --color-neutral-800: var(--ramp-neutral-200);
+  --color-neutral-900: var(--ramp-neutral-100);
+
+  --color-accent-100: var(--ramp-accent-900);
+  --color-accent-200: var(--ramp-accent-800);
+  --color-accent-300: var(--ramp-accent-700);
+  --color-accent-400: var(--ramp-accent-600);
+  --color-accent-500: var(--ramp-accent-500);
+  --color-accent-600: var(--ramp-accent-400);
+  --color-accent-700: var(--ramp-accent-300);
+  --color-accent-800: var(--ramp-accent-200);
+  --color-accent-900: var(--ramp-accent-100);
+
+  --color-accent-2-100: var(--ramp-accent-2-900);
+  --color-accent-2-200: var(--ramp-accent-2-800);
+  --color-accent-2-300: var(--ramp-accent-2-700);
+  --color-accent-2-400: var(--ramp-accent-2-600);
+  --color-accent-2-500: var(--ramp-accent-2-500);
+  --color-accent-2-600: var(--ramp-accent-2-400);
+  --color-accent-2-700: var(--ramp-accent-2-300);
+  --color-accent-2-800: var(--ramp-accent-2-200);
+  --color-accent-2-900: var(--ramp-accent-2-100);
+
+  --color-mood-great: var(--ramp-accent-2-400);
+  --color-on-mood-great: var(--color-bg);
+  --color-mood-good: var(--ramp-accent-2-700);
+  --color-on-mood-good: var(--color-text);
+  --color-mood-okay: var(--ramp-neutral-500);
+  --color-on-mood-okay: var(--color-bg);
+  --color-mood-low: var(--ramp-accent-600);
+  --color-on-mood-low: var(--color-text);
+  --color-mood-rough: var(--ramp-accent-300);
+  --color-on-mood-rough: var(--color-bg);
+
+  --color-miss: var(--ramp-accent-700);
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 3px 10px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.55);
+}
+
+@layer base {
+  html {
+    background-color: var(--color-bg);
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem; /* 15px */
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+  }
+
+  a {
+    color: var(--color-accent-700);
+  }
+  a:hover {
+    color: var(--color-accent-800);
+  }
+
+  /* One themed focus ring for everything interactive; never the browser default. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

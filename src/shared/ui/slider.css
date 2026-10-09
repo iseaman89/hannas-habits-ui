@@ -1,0 +1,76 @@
+/* The native range input drawn as the design's pill track with a ringed thumb. The two engines
+   need their own pseudo-elements (-webkit-… / -moz-…), which is why this is not utility classes.
+   --slider-pct (set by Slider.tsx) is how much of the track is filled. */
+
+.hh-slider {
+  --slider-color: var(--color-accent);
+  appearance: none;
+  width: 100%;
+  height: 1.5rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.hh-slider[data-tone='accent-2'] {
+  --slider-color: var(--color-accent-2);
+}
+
+.hh-slider:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.hh-slider:focus-visible {
+  outline: none;
+}
+
+.hh-slider::-webkit-slider-runnable-track {
+  height: 0.625rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--slider-color) var(--slider-pct),
+    var(--color-neutral-300) var(--slider-pct)
+  );
+}
+
+.hh-slider::-moz-range-track {
+  height: 0.625rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--slider-color) var(--slider-pct),
+    var(--color-neutral-300) var(--slider-pct)
+  );
+}
+
+.hh-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: -0.4375rem; /* centre on the 10px track */
+  border: 4px solid var(--slider-color);
+  border-radius: 999px;
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.hh-slider::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 4px solid var(--slider-color);
+  border-radius: 999px;
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.hh-slider:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.hh-slider:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

@@ -1,0 +1,12 @@
+dist
+node_modules
+package-lock.json
+coverage
+
+# Generated from the backend's OpenAPI document (npm run api:types).
+src/shared/api/schema.d.ts
+
+# Not ours / not code.
+.devcontainer
+.idea
+*.md
