@@ -14,5 +14,7 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export function Card({ tone = 'surface', className, ...rest }: CardProps) {
-  return <div className={cn('rounded-card p-6', tones[tone], className)} {...rest} />;
+  // Tighter on a phone. The classes are not merged: a `p-*` passed in only wins when it is larger
+  // (the stylesheet lists them in ascending order), so a card that wants more says it for both sizes.
+  return <div className={cn('rounded-card p-4 sm:p-6', tones[tone], className)} {...rest} />;
 }

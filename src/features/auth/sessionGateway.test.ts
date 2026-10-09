@@ -4,7 +4,7 @@ import { fakeServer, type FakeReply } from '@/test/fakeServer';
 import { createSessionGateway } from './sessionGateway';
 
 const authResult = {
-  user: { id: 'u-1', userName: 'a@b.c', email: 'a@b.c', displayName: 'A' },
+  user: { id: 'u-1', userName: 'a@b.c', email: 'a@b.c', firstName: 'A', lastName: null },
   tokens: {
     accessToken: 'a2',
     refreshToken: 'r2',

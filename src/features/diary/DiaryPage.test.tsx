@@ -134,17 +134,15 @@ describe('opening a day', () => {
     renderPage(fakeDiary());
     await highlight();
 
-    expect(screen.getByText('Hi, Hanna')).toBeInTheDocument();
-    expect(screen.getByText('How are you feeling today?')).toBeInTheDocument();
+    expect(screen.getByText('Hi, Hanna! How are you feeling today?')).toBeInTheDocument();
   });
 
   it('asks about the past on another day than today', async () => {
     renderPage(fakeDiary(), '/diary/2026-10-05');
     await highlight();
 
-    expect(screen.getByText('Hi, Hanna')).toBeInTheDocument();
-    expect(screen.getByText('How were you feeling on this day?')).toBeInTheDocument();
-    expect(screen.queryByText('How are you feeling today?')).not.toBeInTheDocument();
+    expect(screen.getByText('Hi, Hanna! How were you feeling on this day?')).toBeInTheDocument();
+    expect(screen.queryByText(/feeling today/)).not.toBeInTheDocument();
   });
 
   it('sends a date that is not a real day to today', async () => {

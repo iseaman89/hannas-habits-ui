@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HabitGrid } from './HabitGrid';
 import type { HabitOverview } from './habitsGateway';
 
@@ -37,6 +37,52 @@ function renderGrid(overrides: Partial<Parameters<typeof HabitGrid>[0]> = {}) {
 }
 
 describe('HabitGrid', () => {
+  describe('opening a month', () => {
+    // jsdom lays nothing out, so the measures come from the test: a names column of 128 px, day
+    // columns of 36 px behind it, and a box of 328 px (200 px of room beside the names).
+    const columnOf = (header: HTMLElement) =>
+      Array.from(header.parentElement?.children ?? []).indexOf(header);
+
+    beforeEach(() => {
+      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.tagName === 'TH' ? (columnOf(this) === 0 ? 128 : 36) : 0;
+      });
+      vi.spyOn(HTMLElement.prototype, 'offsetLeft', 'get').mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        if (this.tagName !== 'TH') return 0;
+        const column = columnOf(this);
+        return column === 0 ? 0 : 128 + (column - 1) * 36;
+      });
+      vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.classList.contains('overflow-x-auto') ? 328 : 0;
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const scroller = () => screen.getByRole('table').parentElement!;
+
+    it('scrolls to today, so that on a phone the day that matters is in view', () => {
+      renderGrid(); // today is the 7th: its column starts at 128 + 6 * 36 = 344
+
+      // Seen at 344 - scrollLeft = 128 + (200 - 36) / 2 = 210, the middle of the free room.
+      expect(scroller().scrollLeft).toBe(134);
+    });
+
+    it('stays at the start in a month that does not have today', () => {
+      renderGrid({ month: new Date(2026, 8, 1) });
+
+      expect(scroller().scrollLeft).toBe(0);
+    });
+  });
+
   it.each([
     [new Date(2026, 1, 1), 28],
     [new Date(2028, 1, 1), 29],

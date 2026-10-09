@@ -83,7 +83,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       className={cn(
         base,
         variants[variant],
-        size === 'md' ? 'size-10' : 'size-8',
+        size === 'md' ? 'size-9 sm:size-10' : 'size-8',
         '[&_svg]:size-5',
         className,
       )}

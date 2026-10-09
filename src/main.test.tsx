@@ -43,7 +43,11 @@ describe('main (start-up)', () => {
 
     await boot();
 
-    expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeVisible();
+    // The whole app is imported on demand and the machine may be busy with the other test files:
+    // the default second is not always enough for that (it failed in most runs under load).
+    expect(
+      await screen.findByRole('heading', { name: 'Welcome back' }, { timeout: 10_000 }),
+    ).toBeVisible();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

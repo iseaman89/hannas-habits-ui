@@ -16,7 +16,8 @@ const authResult: AuthResult = {
     id: 'u-1',
     userName: 'hanna@example.com',
     email: 'hanna@example.com',
-    displayName: 'Hanna',
+    firstName: 'Hanna',
+    lastName: null,
   },
   tokens: {
     accessToken: 'a1',
@@ -125,7 +126,7 @@ describe('LoginPage: log in', () => {
     expect(screen.getByRole('heading', { level: 1, name: "Hanna's Habits" })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Welcome back' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
-    expect(screen.queryByLabelText('Your name')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('First name')).not.toBeInTheDocument();
   });
 
   it('asks for what is missing and sends nothing', async () => {
@@ -278,7 +279,8 @@ describe('LoginPage: create an account', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: 'Create your account' }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText('Your name')).toBeInTheDocument();
+    expect(screen.getByLabelText('First name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Last name')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create account' })).toBeInTheDocument();
     // The same element stays (and keeps the focus), so a keyboard user is not thrown out.
     expect(toggle).toHaveFocus();
@@ -287,7 +289,7 @@ describe('LoginPage: create an account', () => {
     await user.click(toggle);
 
     expect(screen.getByRole('heading', { level: 2, name: 'Welcome back' })).toBeInTheDocument();
-    expect(screen.queryByLabelText('Your name')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('First name')).not.toBeInTheDocument();
   });
 
   it('names the mode in the browser tab', async () => {
@@ -311,22 +313,28 @@ describe('LoginPage: create an account', () => {
     expect(calls.register).toEqual([]);
   });
 
-  it('sends name, email and password, then starts the session', async () => {
+  it('sends the names, email and password, then starts the session', async () => {
     const { user, calls, session } = setup();
     await openRegister(user);
 
-    await user.type(screen.getByLabelText('Your name'), '  Hanna ');
+    await user.type(screen.getByLabelText('First name'), '  Hanna ');
+    await user.type(screen.getByLabelText('Last name'), ' Müller ');
     await user.type(emailField(), 'hanna@example.com');
     await user.type(passwordField(), 'Secret-123');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
     await waitFor(() => expect(session.started).toEqual([authResult]));
     expect(calls.register).toEqual([
-      { displayName: 'Hanna', email: 'hanna@example.com', password: 'Secret-123' },
+      {
+        firstName: 'Hanna',
+        lastName: 'Müller',
+        email: 'hanna@example.com',
+        password: 'Secret-123',
+      },
     ]);
   });
 
-  it('lets the name stay empty', async () => {
+  it('lets the names stay empty', async () => {
     const { user, calls } = setup();
     await openRegister(user);
 
@@ -335,7 +343,7 @@ describe('LoginPage: create an account', () => {
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
     await waitFor(() => expect(calls.register).toHaveLength(1));
-    expect(calls.register[0]?.displayName).toBe('');
+    expect(calls.register[0]).toMatchObject({ firstName: '', lastName: '' });
   });
 
   it('shows the password rules of the server under the password field', async () => {

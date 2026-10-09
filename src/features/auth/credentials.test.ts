@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DISPLAY_NAME_MAX_LENGTH,
+  NAME_MAX_LENGTH,
   EMAIL_MAX_LENGTH,
   PASSWORD_MAX_LENGTH,
   loginSchema,
@@ -14,14 +14,19 @@ function loginProblem(input: { email: string; password: string }, field: 'email'
 }
 
 function registerProblem(
-  input: { displayName: string; email: string; password: string },
-  field: 'displayName' | 'email' | 'password',
+  input: { firstName: string; lastName: string; email: string; password: string },
+  field: 'firstName' | 'lastName' | 'email' | 'password',
 ) {
   const result = registerSchema.safeParse(input);
   return result.success ? undefined : result.error.issues.find((i) => i.path[0] === field)?.message;
 }
 
-const valid = { displayName: 'Hanna', email: 'hanna@example.com', password: 'Secret-123' };
+const valid = {
+  firstName: 'Hanna',
+  lastName: 'Müller',
+  email: 'hanna@example.com',
+  password: 'Secret-123',
+};
 
 describe('loginSchema', () => {
   it('accepts an email and a password', () => {
@@ -68,18 +73,16 @@ describe('registerSchema', () => {
     expect(registerSchema.parse(valid)).toEqual(valid);
   });
 
-  it('lets the name stay empty and trims it', () => {
-    expect(registerProblem({ ...valid, displayName: '' }, 'displayName')).toBeUndefined();
-    expect(registerSchema.parse({ ...valid, displayName: '  Hanna  ' }).displayName).toBe('Hanna');
+  it.each(['firstName', 'lastName'] as const)('lets the %s stay empty and trims it', (field) => {
+    expect(registerProblem({ ...valid, [field]: '' }, field)).toBeUndefined();
+    expect(registerSchema.parse({ ...valid, [field]: '  Hanna  ' })[field]).toBe('Hanna');
   });
 
-  it('limits the name to 100 characters', () => {
-    const exactly = 'n'.repeat(DISPLAY_NAME_MAX_LENGTH);
+  it.each(['firstName', 'lastName'] as const)('limits the %s to 100 characters', (field) => {
+    const exactly = 'n'.repeat(NAME_MAX_LENGTH);
 
-    expect(registerProblem({ ...valid, displayName: exactly }, 'displayName')).toBeUndefined();
-    expect(registerProblem({ ...valid, displayName: exactly + 'n' }, 'displayName')).toMatch(
-      /at most 100/,
-    );
+    expect(registerProblem({ ...valid, [field]: exactly }, field)).toBeUndefined();
+    expect(registerProblem({ ...valid, [field]: exactly + 'n' }, field)).toMatch(/at most 100/);
   });
 
   it.each(['hanna', 'hanna@', '@example.com', 'ha nna@example.com', 'a@b@c'])(

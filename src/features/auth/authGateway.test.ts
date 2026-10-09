@@ -8,7 +8,8 @@ const authResult = {
     id: 'u-1',
     userName: 'hanna@example.com',
     email: 'hanna@example.com',
-    displayName: 'Hanna',
+    firstName: 'Hanna',
+    lastName: null,
   },
   tokens: {
     accessToken: 'a1',
@@ -49,21 +50,32 @@ describe('auth gateway', () => {
       gateway.register({
         email: 'hanna@example.com',
         password: 'Secret-123',
-        displayName: 'Hanna',
+        firstName: 'Hanna',
+        lastName: 'Müller',
       }),
     ).resolves.toEqual(authResult);
 
     expect(requests[0]).toMatchObject({
       method: 'post',
       url: '/auth/register',
-      body: { email: 'hanna@example.com', password: 'Secret-123', displayName: 'Hanna' },
+      body: {
+        email: 'hanna@example.com',
+        password: 'Secret-123',
+        firstName: 'Hanna',
+        lastName: 'Müller',
+      },
     });
   });
 
-  it('register leaves the name out when it is blank, so the server falls back by itself', async () => {
+  it('register leaves a name out when it is blank, so the server falls back by itself', async () => {
     const { gateway, requests } = gatewayFor({ status: 201, data: authResult });
 
-    await gateway.register({ email: 'hanna@example.com', password: 'Secret-123', displayName: '' });
+    await gateway.register({
+      email: 'hanna@example.com',
+      password: 'Secret-123',
+      firstName: '',
+      lastName: '',
+    });
 
     expect(requests[0]?.body).toEqual({ email: 'hanna@example.com', password: 'Secret-123' });
   });

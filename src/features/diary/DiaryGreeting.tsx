@@ -10,22 +10,27 @@ interface DiaryGreetingProps {
 }
 
 /**
- * "Hi, Hanna" and the question the mood card beside it answers. On another day than today the
- * question is put in the past: "how are you feeling today?" would be asked about a day that is
- * over (or has not begun).
+ * "Hi, Hanna! How are you feeling today?" - one sentence, the question the mood faces beside or
+ * under it answer. On another day than today the question is put in the past: "how are you
+ * feeling today?" would be asked about a day that is over (or has not begun).
  */
 export function DiaryGreeting({ day, className }: DiaryGreetingProps) {
-  const { displayName } = useUser();
+  const { firstName } = useUser();
   const today = useToday();
-  const name = displayName.trim();
+  const name = firstName.trim();
   const isToday = toApiDate(day) === toApiDate(today);
 
+  const hello = name ? `Hi, ${name}!` : 'Hi!';
+  const question = isToday ? 'How are you feeling today?' : 'How were you feeling on this day?';
+
   return (
-    <div className={cn('min-w-0', className)}>
-      <p className="font-display text-dialog">{name ? `Hi, ${name}` : 'Hi'}</p>
-      <p className="mt-1 text-neutral-700">
-        {isToday ? 'How are you feeling today?' : 'How were you feeling on this day?'}
-      </p>
-    </div>
+    <p
+      className={cn(
+        'min-w-0 font-display text-[1.25rem] leading-snug @lg:text-[1.625rem]',
+        className,
+      )}
+    >
+      {`${hello} ${question}`}
+    </p>
   );
 }

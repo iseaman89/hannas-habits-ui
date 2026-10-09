@@ -23,7 +23,7 @@ export function ThemeSwitch({ value, onChange }: ThemeSwitchProps) {
     <div
       role="radiogroup"
       aria-label="Colour theme"
-      className="inline-flex gap-1 rounded-full bg-neutral-200 p-1"
+      className="inline-flex gap-0.5 rounded-full bg-neutral-200 p-0.5 sm:gap-1 sm:p-1"
     >
       {options.map(({ value: option, label, Icon }) => (
         <label key={option} className="cursor-pointer">
@@ -35,7 +35,7 @@ export function ThemeSwitch({ value, onChange }: ThemeSwitchProps) {
             onChange={() => onChange(option)}
             className="peer sr-only"
           />
-          <span className="flex size-9 items-center justify-center rounded-full text-neutral-700 transition-colors hover:text-text peer-checked:bg-bg peer-checked:text-accent-700 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent">
+          <span className="flex size-7 items-center sm:size-9 justify-center rounded-full text-neutral-700 transition-colors hover:text-text peer-checked:bg-bg peer-checked:text-accent-700 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent">
             <Icon className="size-[18px]" aria-hidden />
             <span className="sr-only">{label}</span>
           </span>

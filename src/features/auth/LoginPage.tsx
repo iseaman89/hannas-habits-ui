@@ -86,7 +86,7 @@ export function LoginPage({ gateway = authGateway, GoogleButton = GoogleSection 
       </section>
 
       <main className="grid place-items-center px-4 pb-10 pt-4 lg:p-8">
-        <Card className="flex w-full max-w-md flex-col gap-5 p-8 shadow-md">
+        <Card className="flex w-full max-w-md flex-col gap-5 p-6 shadow-md sm:p-8">
           <h2 className="font-display text-dialog">
             {mode === 'login' ? 'Welcome back' : 'Create your account'}
           </h2>

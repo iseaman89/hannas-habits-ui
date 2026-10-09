@@ -2,7 +2,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fakeSession, signedIn, signedOut } from '@/test/fakeSession';
+import { fakeSession, signedIn, signedOut, testUser } from '@/test/fakeSession';
 import { App } from './App';
 import { routes } from './routes';
 
@@ -63,6 +63,18 @@ describe('the app skeleton', () => {
     expect(screen.getByText('Hanna')).toBeInTheDocument();
     expect(screen.getByText('hanna@example.com')).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: 'Colour theme' })).toBeInTheDocument();
+  });
+
+  it('names the service after the person', () => {
+    renderApp(signedIn, '/habits');
+
+    expect(screen.getByRole('link', { name: "Hanna's Habits" })).toHaveAttribute('href', '/');
+  });
+
+  it('gives a name that ends in s only the apostrophe', () => {
+    renderApp({ ...signedIn, user: { ...testUser, firstName: 'Hans' } }, '/habits');
+
+    expect(screen.getByRole('link', { name: "Hans' Habits" })).toHaveAttribute('href', '/');
   });
 
   it('marks Today as current on every diary day, not only on the real today', () => {

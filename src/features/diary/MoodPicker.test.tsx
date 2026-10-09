@@ -53,15 +53,34 @@ describe('MoodPicker', () => {
     expect(mood()).toBe('4');
   });
 
-  it('names the chosen mood and can take it back, because a day may have no mood', async () => {
+  it('can take the chosen mood back, because a day may have no mood', async () => {
     const user = userEvent.setup();
     render(<Harness initial={3} />);
 
-    expect(screen.getByText('Okay', { selector: 'span[aria-hidden]' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Okay' })).toBeChecked();
 
     await user.click(screen.getByRole('button', { name: 'Clear mood' }));
 
     expect(mood()).toBe('null');
     expect(screen.queryByRole('button', { name: 'Clear mood' })).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole('radio').every((radio) => !(radio as HTMLInputElement).checked),
+    ).toBe(true);
+  });
+
+  it('shows only the faces: no title and no word for the chosen one', () => {
+    render(<Harness initial={5} />);
+
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+    expect(screen.queryByText('Great', { selector: ':not(.sr-only)' })).not.toBeInTheDocument();
+  });
+
+  it('gives a face its name as a tooltip', () => {
+    render(<Harness />);
+
+    expect(screen.getByRole('radio', { name: 'Rough' }).closest('label')).toHaveAttribute(
+      'title',
+      'Rough',
+    );
   });
 });

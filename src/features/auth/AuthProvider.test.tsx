@@ -12,7 +12,7 @@ function Probe() {
   return (
     <div>
       <p data-testid="status">{status}</p>
-      <p data-testid="user">{user?.displayName ?? 'nobody'}</p>
+      <p data-testid="user">{user?.firstName ?? 'nobody'}</p>
       <button onClick={() => void signOut()}>Sign out</button>
     </div>
   );
@@ -73,9 +73,7 @@ describe('AuthProvider', () => {
       const { session, queryClient } = setup(signedIn);
       queryClient.setQueryData(['habits'], [{ title: 'Read' }]);
 
-      act(() =>
-        session.set({ ...signedIn, user: { ...testUser, id: 'u-2', displayName: 'Anna' } }),
-      );
+      act(() => session.set({ ...signedIn, user: { ...testUser, id: 'u-2', firstName: 'Anna' } }));
 
       expect(queryClient.getQueryData(['habits'])).toBeUndefined();
     });

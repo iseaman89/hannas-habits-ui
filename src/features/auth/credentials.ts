@@ -8,7 +8,8 @@ import { z } from 'zod';
  */
 export const EMAIL_MAX_LENGTH = 256;
 export const PASSWORD_MAX_LENGTH = 128;
-export const DISPLAY_NAME_MAX_LENGTH = 100;
+/** For the first name and, separately, for the last name. */
+export const NAME_MAX_LENGTH = 100;
 
 // Same idea as the server's check: something, an @, something. Anything stricter would reject
 // addresses the server accepts.
@@ -30,12 +31,12 @@ const password = z
 export const loginSchema = z.object({ email, password });
 export type LoginValues = z.infer<typeof loginSchema>;
 
+// Both names are optional; a blank first name is fine (the account then shows the email's local part).
+const name = z.string().trim().max(NAME_MAX_LENGTH, `Use at most ${NAME_MAX_LENGTH} characters.`);
+
 export const registerSchema = z.object({
-  /** Optional; blank is fine (the account then shows the email's local part). */
-  displayName: z
-    .string()
-    .trim()
-    .max(DISPLAY_NAME_MAX_LENGTH, `Use at most ${DISPLAY_NAME_MAX_LENGTH} characters.`),
+  firstName: name,
+  lastName: name,
   email: email.regex(EMAIL_SHAPE, 'Enter a valid email address.'),
   password,
 });

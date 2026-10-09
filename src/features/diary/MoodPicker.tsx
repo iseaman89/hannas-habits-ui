@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
-import { Card, IconButton } from '@/shared/ui';
+import { IconButton } from '@/shared/ui';
 import type { Mood } from './diaryDraft';
 import { MOODS } from './moods';
 
@@ -9,44 +9,28 @@ interface MoodPickerProps {
   value: Mood | null;
   /** `null` = no mood. */
   onChange: (mood: Mood | null) => void;
-  /** For the card's place in the page (its width); the look is the picker's own. */
+  /** For the row's place in the page; the look is the picker's own. */
   className?: string;
 }
 
 /**
- * Five faces, one of them chosen. A radio group of real radio inputs (hidden, the circle is
- * their label), so the arrow keys, the group name and "selected" come from the browser. A radio
- * cannot be un-chosen by itself, hence the small clear button: a day may have no mood at all.
+ * Five faces, one of them chosen - just the faces, no title and no word for the chosen one (the
+ * card around it, `DiaryWelcome`, says what they are for; a face's name is its tooltip and what a
+ * screen reader hears). A radio group of real radio inputs (hidden, the circle is their label),
+ * so the arrow keys, the group name and "selected" come from the browser. A radio cannot be
+ * un-chosen by itself, hence the small clear button: a day may have no mood at all.
+ *
+ * The clear button has its place from the start, empty until a mood is chosen: if it only
+ * appeared then, the faces would jump aside the moment the person clicks one.
  */
 export function MoodPicker({ value, onChange, className }: MoodPickerProps) {
   const name = useId();
-  const chosen = MOODS.find((mood) => mood.value === value);
 
   return (
-    <Card className={className}>
-      <div className="flex items-center justify-between gap-3">
-        <h2 id={`${name}-title`} className="font-display text-card">
-          Mood
-        </h2>
-        <div className="flex items-center gap-1">
-          <span aria-hidden className="font-bold text-accent-700">
-            {chosen?.label}
-          </span>
-          {chosen && (
-            <IconButton label="Clear mood" size="sm" onClick={() => onChange(null)}>
-              <X aria-hidden />
-            </IconButton>
-          )}
-        </div>
-      </div>
-
-      <div
-        role="radiogroup"
-        aria-labelledby={`${name}-title`}
-        className="mt-4 flex flex-wrap items-center gap-3"
-      >
+    <div className={cn('flex items-center gap-2', className)}>
+      <div role="radiogroup" aria-label="Mood" className="flex items-center gap-2 sm:gap-3">
         {MOODS.map(({ value: mood, label, Icon, chosen: chosenStyle }) => (
-          <label key={mood} className="cursor-pointer">
+          <label key={mood} title={label} className="cursor-pointer">
             <input
               type="radio"
               name={name}
@@ -57,17 +41,26 @@ export function MoodPicker({ value, onChange, className }: MoodPickerProps) {
             />
             <span
               className={cn(
-                'grid size-[3.125rem] place-items-center rounded-full transition-colors',
+                // 50 px where there is room, down to 36 px so that all five fit on a narrow phone.
+                'grid size-[clamp(2.25rem,11vw,3.125rem)] place-items-center rounded-full transition-colors',
                 'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent',
                 value === mood ? chosenStyle : 'bg-bg text-neutral-700 hover:bg-neutral-200',
               )}
             >
-              <Icon className="size-7" aria-hidden />
+              <Icon className="size-[56%]" aria-hidden />
               <span className="sr-only">{label}</span>
             </span>
           </label>
         ))}
       </div>
-    </Card>
+
+      <div className="size-8 shrink-0">
+        {value !== null && (
+          <IconButton label="Clear mood" size="sm" onClick={() => onChange(null)}>
+            <X aria-hidden />
+          </IconButton>
+        )}
+      </div>
+    </div>
   );
 }

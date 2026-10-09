@@ -9,11 +9,12 @@ import type { AuthResult } from './session';
  */
 export interface AuthGateway {
   login: (credentials: { email: string; password: string }) => Promise<AuthResult>;
-  /** `displayName` is optional: blank means "none", the server then uses the email's local part. */
+  /** The names are optional: blank means "none", the server then greets with the email's local part. */
   register: (account: {
     email: string;
     password: string;
-    displayName: string;
+    firstName: string;
+    lastName: string;
   }) => Promise<AuthResult>;
   /** `idToken` is the credential Google's sign-in button hands over. */
   google: (idToken: string) => Promise<AuthResult>;
@@ -23,9 +24,14 @@ export function createAuthGateway(api: TypedApi): AuthGateway {
   return {
     login: ({ email, password }) => api.post('/api/auth/login', { body: { email, password } }),
 
-    register: ({ email, password, displayName }) =>
+    register: ({ email, password, firstName, lastName }) =>
       api.post('/api/auth/register', {
-        body: { email, password, displayName: displayName || undefined },
+        body: {
+          email,
+          password,
+          firstName: firstName || undefined,
+          lastName: lastName || undefined,
+        },
       }),
 
     google: (idToken) => api.post('/api/auth/google', { body: { idToken } }),

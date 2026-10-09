@@ -13,7 +13,7 @@ interface RegisterFormProps {
   disabled?: boolean;
 }
 
-const FIELDS = ['displayName', 'email', 'password'] as const;
+const FIELDS = ['firstName', 'lastName', 'email', 'password'] as const;
 
 export function RegisterForm({ onSubmit, disabled }: RegisterFormProps) {
   const {
@@ -23,7 +23,7 @@ export function RegisterForm({ onSubmit, disabled }: RegisterFormProps) {
     formState: { errors, isSubmitting },
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { displayName: '', email: '', password: '' },
+    defaultValues: { firstName: '', lastName: '', email: '', password: '' },
   });
   const [formMessage, setFormMessage] = useState<string | null>(null);
 
@@ -43,9 +43,14 @@ export function RegisterForm({ onSubmit, disabled }: RegisterFormProps) {
 
   return (
     <form noValidate onSubmit={(event) => void submit(event)} className="flex flex-col gap-4">
-      <Field label="Your name" hint="Optional." error={errors.displayName?.message}>
-        {(control) => <Input autoComplete="name" {...control} {...register('displayName')} />}
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="First name" hint="Optional." error={errors.firstName?.message}>
+          {(control) => <Input autoComplete="given-name" {...control} {...register('firstName')} />}
+        </Field>
+        <Field label="Last name" hint="Optional." error={errors.lastName?.message}>
+          {(control) => <Input autoComplete="family-name" {...control} {...register('lastName')} />}
+        </Field>
+      </div>
       <Field label="Email" error={errors.email?.message}>
         {(control) => (
           <Input

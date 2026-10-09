@@ -46,7 +46,7 @@ export function AppShell() {
         id="main"
         ref={main}
         tabIndex={-1}
-        className="min-w-0 flex-1 overflow-y-auto px-1 pb-28 pt-2 outline-none sm:px-4 lg:px-10 lg:py-9"
+        className="min-w-0 flex-1 overflow-y-auto px-1 pb-24 pt-2 outline-none sm:px-4 lg:px-10 lg:py-9"
       >
         <Outlet />
       </main>

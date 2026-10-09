@@ -79,7 +79,7 @@ export function MonthCard({ month, today, entries, current }: MonthCardProps) {
   }
 
   return (
-    <Card tone={current ? 'soft' : 'surface'} className="p-5">
+    <Card tone={current ? 'soft' : 'surface'}>
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <h2 id={headingId} className="font-display text-card">
           {format(month, 'MMMM')}

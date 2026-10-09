@@ -17,7 +17,8 @@ const user = {
   id: '6c6bba06-0000-4000-8000-000000000001',
   userName: 'hanna@example.com',
   email: 'hanna@example.com',
-  displayName: 'Hanna',
+  firstName: 'Hanna',
+  lastName: null,
 };
 
 const rejected = (status: number) =>

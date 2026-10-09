@@ -57,7 +57,7 @@ function DiaryDay({ date, day, gateway, habitsGateway }: DiaryDayProps) {
   return (
     <>
       <DiaryHeader day={day} />
-      <div className="mt-6">
+      <div className="mt-4 sm:mt-6">
         {loaded.isError ? (
           <div className="flex flex-col items-start gap-4">
             <FormMessage message={errorMessage(loaded.error, 'This day could not be loaded.')} />

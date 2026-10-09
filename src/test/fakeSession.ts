@@ -4,7 +4,8 @@ export const testUser: SessionUser = {
   id: 'u-1',
   userName: 'hanna@example.com',
   email: 'hanna@example.com',
-  displayName: 'Hanna',
+  firstName: 'Hanna',
+  lastName: null,
 };
 
 export const signedIn: SessionState = { status: 'authenticated', user: testUser, endedBy: null };

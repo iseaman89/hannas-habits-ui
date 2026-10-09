@@ -1523,7 +1523,8 @@ export interface components {
             id: string;
             userName: string;
             email: string;
-            displayName: string;
+            firstName: string;
+            lastName: string | null;
         };
         LoginRequest: {
             email?: string;
@@ -1550,7 +1551,8 @@ export interface components {
         RegisterRequest: {
             email?: string;
             password?: string;
-            displayName?: string | null;
+            firstName?: string | null;
+            lastName?: string | null;
         };
         ResolutionDto: {
             /** Format: uuid */

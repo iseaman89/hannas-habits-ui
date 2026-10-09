@@ -131,9 +131,13 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
             >
               <ChevronRight />
             </IconButton>
-            <Button onClick={() => setDialog({ kind: 'create' })}>
+            {/* On a phone just the plus: the header has room for little else beside the title. */}
+            <Button
+              className="max-sm:size-9 max-sm:px-0"
+              onClick={() => setDialog({ kind: 'create' })}
+            >
               <Plus className="size-5" aria-hidden />
-              New habit
+              <span className="max-sm:sr-only">New habit</span>
             </Button>
           </>
         }
