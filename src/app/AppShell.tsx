@@ -18,7 +18,9 @@ function screenOf(pathname: string): string {
  * habit grid) or far down made the page itself wider or taller than the screen: empty space on the
  * right and below, and the fixed bottom bar stretched to the wider page.
  *
- * The top spacing of `main` is the variable `--page-top`: a pinned `PageHeader` takes it into itself
+ * The top spacing of `main` is the variable `--page-top`, a small 0.5rem on every screen size: the
+ * pinned top part of a screen sits right at the top and does not move when the page scrolls (a
+ * roomy 2.25rem on a wide screen was an empty band above it). A pinned `PageHeader` takes it into itself
  * (negative margin, same padding) and so sticks flush at the top without a jump. `scroll-pt-32`
  * keeps a focused control from ending up under it.
  *
@@ -56,7 +58,7 @@ export function AppShell() {
         id="main"
         ref={main}
         tabIndex={-1}
-        className="relative min-w-0 flex-1 scroll-pt-32 overflow-y-auto px-1 pb-24 pt-(--page-top) outline-none [--page-top:0.5rem] sm:px-4 lg:px-10 lg:pb-9 lg:[--page-top:2.25rem]"
+        className="relative min-w-0 flex-1 scroll-pt-32 overflow-y-auto px-1 pb-24 pt-(--page-top) outline-none [--page-top:0.5rem] sm:px-4 lg:px-10 lg:pb-9"
       >
         <Outlet />
       </main>

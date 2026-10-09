@@ -1,4 +1,5 @@
 import { render } from '@testing-library/react';
+import logoUrl from '@/assets/logo.svg';
 import { describe, expect, it } from 'vitest';
 import { BrandMark } from './BrandMark';
 
@@ -7,7 +8,7 @@ describe('BrandMark', () => {
     const { container } = render(<BrandMark className="size-11" />);
 
     const logo = container.querySelector('img');
-    expect(logo).toHaveAttribute('src', '/favicon.svg');
+    expect(logo).toHaveAttribute('src', logoUrl);
     expect(logo).toHaveClass('size-11');
   });
 

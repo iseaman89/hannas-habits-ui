@@ -2,6 +2,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import logoUrl from '@/assets/logo.svg';
 import { fakeSession, signedIn, signedOut, testUser } from '@/test/fakeSession';
 import { App } from './App';
 import { routes } from './routes';
@@ -75,7 +76,7 @@ describe('the app skeleton', () => {
     renderApp({ ...signedIn, user: { ...testUser, firstName: 'Yevgen' } }, '/habits');
 
     const brandLink = screen.getByRole('link', { name: "Yevgen's Habits" });
-    expect(brandLink.querySelector('img')).toHaveAttribute('src', '/favicon.svg');
+    expect(brandLink.querySelector('img')).toHaveAttribute('src', logoUrl);
   });
 
   it('gives a name that ends in s only the apostrophe', () => {
