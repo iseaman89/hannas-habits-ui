@@ -24,6 +24,7 @@ const stretch: HabitOverview = {
   startDate: '2026-10-01',
   scheduledDates: dueDays(everyDay, '2026-10-01'),
   completedDates: ['2026-10-05'],
+  taggedDays: [],
   currentStreak: 4,
 };
 
@@ -34,6 +35,7 @@ const read: HabitOverview = {
   startDate: '2026-10-01',
   scheduledDates: dueDays(monWedFri, '2026-10-01'),
   completedDates: [],
+  taggedDays: [],
   currentStreak: 0,
 };
 

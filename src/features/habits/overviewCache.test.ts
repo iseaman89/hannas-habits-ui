@@ -13,6 +13,7 @@ function habit(id: string, completedDates: string[], currentStreak = 0): HabitOv
     startDate: '2026-01-01',
     scheduledDates: [],
     completedDates,
+    taggedDays: [],
     currentStreak,
   };
 }

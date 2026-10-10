@@ -123,6 +123,8 @@ export function fakeHabits(initial: FakeHabit[] = []) {
         completedDates: [...habit.completed]
           .filter((day) => day >= query.from && day <= query.to)
           .sort(),
+        // Tags come with F12; until then the stand-in knows none.
+        taggedDays: [],
         currentStreak: habit.completed.size,
       }));
     },
