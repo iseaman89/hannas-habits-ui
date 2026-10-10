@@ -1441,6 +1441,7 @@ export interface components {
             id: string;
             title: string;
             schedule: components["schemas"]["DayOfWeek"][];
+            recurrence: components["schemas"]["RecurrenceDto"];
             /** Format: date */
             startDate: string;
         };
@@ -1450,6 +1451,7 @@ export interface components {
             schedule?: components["schemas"]["DayOfWeek"][] | null;
             /** Format: date */
             startDate?: string | null;
+            recurrence?: components["schemas"]["RecurrenceRequest"] | null;
         };
         DailyDiaryDayDto: {
             /** Format: date */
@@ -1487,6 +1489,7 @@ export interface components {
             title: string;
             description: string | null;
             schedule: components["schemas"]["DayOfWeek"][];
+            recurrence: components["schemas"]["RecurrenceDto"];
             /** Format: date */
             startDate: string;
             /** Format: date-time */
@@ -1498,14 +1501,17 @@ export interface components {
             title: string;
             description: string | null;
             schedule: components["schemas"]["DayOfWeek"][];
+            recurrence: components["schemas"]["RecurrenceDto"];
         };
         HabitOverviewDto: {
             /** Format: uuid */
             id: string;
             title: string;
             schedule: components["schemas"]["DayOfWeek"][];
+            recurrence: components["schemas"]["RecurrenceDto"];
             /** Format: date */
             startDate: string;
+            scheduledDates: string[];
             completedDates: string[];
             /** Format: int32 */
             currentStreak: number;
@@ -1545,6 +1551,30 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        RecurrenceDto: {
+            kind: components["schemas"]["ScheduleKind"];
+            weekdays: components["schemas"]["DayOfWeek"][];
+            /** Format: int32 */
+            interval: number;
+            /** Format: date */
+            anchor: string | null;
+            occurrence: components["schemas"]["WeekdayOccurrence"] | null;
+            weekday: components["schemas"]["DayOfWeek"] | null;
+            /** Format: int32 */
+            dayOfMonth: number | null;
+        };
+        RecurrenceRequest: {
+            kind?: components["schemas"]["ScheduleKind"] | null;
+            weekdays?: components["schemas"]["DayOfWeek"][] | null;
+            /** Format: int32 */
+            interval?: number | null;
+            /** Format: date */
+            anchor?: string | null;
+            occurrence?: components["schemas"]["WeekdayOccurrence"] | null;
+            weekday?: components["schemas"]["DayOfWeek"] | null;
+            /** Format: int32 */
+            dayOfMonth?: number | null;
+        };
         RefreshRequest: {
             refreshToken?: string;
         };
@@ -1577,6 +1607,8 @@ export interface components {
             learned?: string[] | null;
             tasks?: components["schemas"]["DiaryTaskDto"][] | null;
         };
+        /** @enum {string} */
+        ScheduleKind: "weekly" | "everyNDays" | "monthlyOnWeekday" | "monthlyOnDate";
         TokenPair: {
             accessToken: string;
             refreshToken: string;
@@ -1588,9 +1620,10 @@ export interface components {
         UpdateHabitRequest: {
             title?: string;
             description?: string | null;
-            schedule?: components["schemas"]["DayOfWeek"][];
+            schedule?: components["schemas"]["DayOfWeek"][] | null;
             /** Format: date */
             startDate?: string | null;
+            recurrence?: components["schemas"]["RecurrenceRequest"] | null;
         };
         UpdateResolutionRequest: {
             title?: string;
@@ -1611,6 +1644,8 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** @enum {string} */
+        WeekdayOccurrence: "first" | "second" | "third" | "fourth" | "last";
     };
     responses: never;
     parameters: never;

@@ -7,6 +7,8 @@ import type {
   OverviewQuery,
 } from '@/features/habits/habitsGateway';
 import type { DayOfWeek } from '@/features/habits/weekdays';
+import { eachDayOfInterval, format, getDay, parseISO } from 'date-fns';
+import { weeklyRecurrence } from './recurrence';
 
 export interface FakeHabit {
   id: string;
@@ -31,6 +33,16 @@ type Call = keyof HabitsGateway;
  * - `failNext()` makes the next call of that kind fail once.
  */
 export function fakeHabits(initial: FakeHabit[] = []) {
+  // What the server answers in `scheduledDates`: the days of the range the habit is due on, none before the start date.
+  const scheduledDates = (
+    habit: { schedule: DayOfWeek[]; startDate: string },
+    query: OverviewQuery,
+  ) =>
+    eachDayOfInterval({ start: parseISO(query.from), end: parseISO(query.to) })
+      .filter((day) => habit.schedule.includes(getDay(day) as DayOfWeek))
+      .map((day) => format(day, 'yyyy-MM-dd'))
+      .filter((day) => day >= habit.startDate);
+
   const habits = initial.map((habit) => ({
     ...habit,
     description: habit.description ?? null,
@@ -89,6 +101,7 @@ export function fakeHabits(initial: FakeHabit[] = []) {
         title: habit.title,
         description: habit.description,
         schedule: habit.schedule,
+        recurrence: weeklyRecurrence(habit.schedule),
       }));
     },
 
@@ -99,7 +112,9 @@ export function fakeHabits(initial: FakeHabit[] = []) {
         id: habit.id,
         title: habit.title,
         schedule: habit.schedule,
+        recurrence: weeklyRecurrence(habit.schedule),
         startDate: habit.startDate,
+        scheduledDates: scheduledDates(habit, query),
         completedDates: [...habit.completed]
           .filter((day) => day >= query.from && day <= query.to)
           .sort(),
@@ -116,6 +131,7 @@ export function fakeHabits(initial: FakeHabit[] = []) {
         title: habit.title,
         description: habit.description,
         schedule: habit.schedule,
+        recurrence: weeklyRecurrence(habit.schedule),
         startDate: habit.startDate,
         createdAt: '2026-10-01T08:00:00Z',
       } satisfies HabitDetails;
@@ -137,6 +153,7 @@ export function fakeHabits(initial: FakeHabit[] = []) {
         id: habit.id,
         title: habit.title,
         schedule: habit.schedule,
+        recurrence: weeklyRecurrence(habit.schedule),
         startDate: input.startDate,
       };
     },

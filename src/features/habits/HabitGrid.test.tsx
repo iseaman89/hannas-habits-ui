@@ -2,13 +2,16 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HabitGrid } from './HabitGrid';
+import { weeklyRecurrence } from '@/test/recurrence';
 import type { HabitOverview } from './habitsGateway';
 
 const stretch: HabitOverview = {
   id: 'h-1',
   title: 'Stretch',
   schedule: [0, 1, 2, 3, 4, 5, 6],
+  recurrence: weeklyRecurrence([0, 1, 2, 3, 4, 5, 6]),
   startDate: '2026-10-01',
+  scheduledDates: [], // the grid reads the weekdays until F11
   completedDates: ['2026-10-05'],
   currentStreak: 4,
 };
@@ -17,7 +20,9 @@ const read: HabitOverview = {
   id: 'h-2',
   title: 'Read',
   schedule: [1, 3, 5],
+  recurrence: weeklyRecurrence([1, 3, 5]),
   startDate: '2026-10-01',
+  scheduledDates: [],
   completedDates: [],
   currentStreak: 0,
 };

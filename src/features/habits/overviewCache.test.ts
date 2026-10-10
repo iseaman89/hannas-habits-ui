@@ -1,6 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 import { habitKeys } from './habitQueries';
+import { weeklyRecurrence } from '@/test/recurrence';
 import type { HabitOverview, OverviewQuery } from './habitsGateway';
 import { applyCompletion, withCompletion } from './overviewCache';
 
@@ -9,7 +10,9 @@ function habit(id: string, completedDates: string[], currentStreak = 0): HabitOv
     id,
     title: `Habit ${id}`,
     schedule: [0, 1, 2, 3, 4, 5, 6],
+    recurrence: weeklyRecurrence([0, 1, 2, 3, 4, 5, 6]),
     startDate: '2026-01-01',
+    scheduledDates: [],
     completedDates,
     currentStreak,
   };
