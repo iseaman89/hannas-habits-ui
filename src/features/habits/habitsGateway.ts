@@ -1,5 +1,5 @@
 import { ApiError, api, type Schema, type TypedApi } from '@/shared/api';
-import type { DayOfWeek } from './weekdays';
+import type { RecurrenceRequest } from './recurrence';
 
 export type HabitOverview = Schema<'HabitOverviewDto'>;
 export type HabitDetails = Schema<'HabitDetailsDto'>;
@@ -21,11 +21,13 @@ export interface OverviewQuery {
 /**
  * What a person fills in. Leaving `description` out would clear it, so blank is an explicit
  * `null`. `startDate` (`yyyy-MM-dd`) is the first day the habit counts, in the client's local time.
+ * `recurrence` is the rule that decides on which days the habit is due; the deprecated
+ * `schedule` (weekdays only) is no longer sent.
  */
 export interface HabitInput {
   title: string;
   description: string | null;
-  schedule: DayOfWeek[];
+  recurrence: RecurrenceRequest;
   startDate: string;
 }
 

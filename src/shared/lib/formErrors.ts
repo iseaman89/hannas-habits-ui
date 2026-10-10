@@ -11,18 +11,23 @@ import { ApiError, errorMessage } from '@/shared/api';
  * found its field.
  *
  *     const message = applyServerError(error, setError, ['email', 'password']);
+ *
+ * `aliases` names the server's key for a field the form spells differently (the API's one
+ * `recurrence.interval` is `recurrence.everyWeeks` or `recurrence.everyDays` on screen).
  */
 export function applyServerError<T extends FieldValues>(
   error: unknown,
   setError: UseFormSetError<T>,
   fields: readonly Path<T>[],
+  aliases: Readonly<Record<string, Path<T>>> = {},
 ): string | null {
   if (!(error instanceof ApiError)) return errorMessage(error);
 
   let pinned = 0;
   let allPinned = true;
   for (const [key, messages] of Object.entries(error.fieldErrors)) {
-    const field = fields.find((candidate) => candidate === key);
+    const target = aliases[key] ?? key;
+    const field = fields.find((candidate) => candidate === target);
     if (!field || messages.length === 0) {
       allPinned = false;
       continue;

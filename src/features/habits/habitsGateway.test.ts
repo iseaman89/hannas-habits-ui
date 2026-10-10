@@ -61,7 +61,7 @@ describe('habits gateway', () => {
     const input = {
       title: 'Read',
       description: null,
-      schedule: [1 as const],
+      recurrence: { kind: 'weekly' as const, weekdays: [1 as const], interval: 1 },
       startDate: '2026-10-07',
     };
 
@@ -75,7 +75,11 @@ describe('habits gateway', () => {
     const input = {
       title: 'Stretch',
       description: 'Morning',
-      schedule: [2 as const, 4 as const],
+      recurrence: {
+        kind: 'monthlyOnWeekday' as const,
+        occurrence: 'last' as const,
+        weekday: 6 as const,
+      },
       startDate: '2026-09-01',
     };
 

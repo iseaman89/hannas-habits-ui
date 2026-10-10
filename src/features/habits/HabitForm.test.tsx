@@ -1,16 +1,29 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { apiError } from '@/test/problems';
 import { emptyHabit, type HabitValues } from './habitSchema';
 import type { HabitInput } from './habitsGateway';
 import { HabitForm } from './HabitForm';
+import { DEFAULT_RECURRENCE, type RecurrenceValues } from './recurrenceSchema';
+import type { DayOfWeek } from './weekdays';
 
 // The client's "today" in these tests.
 const EMPTY_HABIT = emptyHabit('2026-10-07');
 
+/** The form's rule, with only what a test cares about changed. */
+const rule = (changes: Partial<RecurrenceValues>): RecurrenceValues => ({
+  ...DEFAULT_RECURRENCE,
+  ...changes,
+});
+const weekly = (weekdays: DayOfWeek[]) => rule({ weekdays });
+
 function renderForm(
-  options: { initial?: HabitValues; onSubmit?: (input: HabitInput) => Promise<unknown> } = {},
+  options: {
+    initial?: HabitValues;
+    onSubmit?: (input: HabitInput) => Promise<unknown>;
+    editing?: boolean;
+  } = {},
 ) {
   const onSubmit = options.onSubmit ?? vi.fn(() => Promise.resolve());
   const onCancel = vi.fn();
@@ -20,6 +33,7 @@ function renderForm(
       submitLabel="Add habit"
       onSubmit={onSubmit}
       onCancel={onCancel}
+      editing={options.editing}
     />,
   );
   return { onSubmit, onCancel };
@@ -29,6 +43,7 @@ const title = () => screen.getByLabelText('What do you want to do?');
 const day = (name: string) => screen.getByRole('button', { name });
 const startDate = () => screen.getByLabelText('Starts on');
 const submitButton = () => screen.getByRole('button', { name: /^Add habit/ });
+const repeat = () => screen.getByLabelText('Repeat');
 
 describe('HabitForm', () => {
   it('starts as an every-day habit and cannot be sent without a name', async () => {
@@ -48,7 +63,7 @@ describe('HabitForm', () => {
   it('turns single days on and off, Monday first, and counts them', async () => {
     const user = userEvent.setup();
     const { onSubmit } = renderForm({
-      initial: { ...EMPTY_HABIT, title: 'Stretch', schedule: [1] },
+      initial: { ...EMPTY_HABIT, title: 'Stretch', recurrence: weekly([1]) },
     });
 
     expect(day('Monday')).toHaveAttribute('aria-pressed', 'true');
@@ -65,12 +80,14 @@ describe('HabitForm', () => {
 
     await user.click(submitButton());
     // Sent in the order of the week, whatever order the days were ticked in.
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ schedule: [1, 3, 0] }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recurrence: { kind: 'weekly', weekdays: [1, 3, 0], interval: 1 } }),
+    );
   });
 
   it('cannot be sent with no day at all', async () => {
     const user = userEvent.setup();
-    renderForm({ initial: { ...EMPTY_HABIT, title: 'Stretch', schedule: [4] } });
+    renderForm({ initial: { ...EMPTY_HABIT, title: 'Stretch', recurrence: weekly([4]) } });
 
     await user.click(day('Thursday'));
 
@@ -106,7 +123,7 @@ describe('HabitForm', () => {
     expect(onSubmit).toHaveBeenCalledWith({
       title: 'Stretch for 10 minutes',
       description: null,
-      schedule: [1, 2, 3, 4, 5],
+      recurrence: { kind: 'weekly', weekdays: [1, 2, 3, 4, 5], interval: 1 },
       startDate: '2026-10-07',
     });
   });
@@ -165,7 +182,9 @@ describe('HabitForm', () => {
     renderForm({
       initial: { ...EMPTY_HABIT, title: 'Stretch' },
       onSubmit: () =>
-        Promise.reject(apiError(400, { fieldErrors: { schedule: ['Pick a real day.'] } })),
+        Promise.reject(
+          apiError(400, { fieldErrors: { 'recurrence.weekdays': ['Pick a real day.'] } }),
+        ),
     });
 
     await user.click(submitButton());
@@ -198,5 +217,273 @@ describe('HabitForm', () => {
 
     expect(onCancel).toHaveBeenCalledOnce();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
+
+describe('HabitForm: the repeat rule', () => {
+  const named = { ...EMPTY_HABIT, title: 'Stretch' };
+
+  it('offers the four kinds and starts on "days of the week"', () => {
+    renderForm({ initial: named });
+
+    expect(repeat()).toHaveValue('weekly');
+    expect(
+      within(repeat())
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual([
+      'On days of the week',
+      'Every few days',
+      'A weekday of the month',
+      'A date of the month',
+    ]);
+    expect(screen.getByLabelText('Every how many weeks?')).toHaveValue(1);
+    // (the preset button of the same name is not the sentence)
+    expect(screen.getByText('Every day', { selector: 'p span' })).toBeInTheDocument();
+  });
+
+  it('says the rule in words as it is put together', async () => {
+    const user = userEvent.setup();
+    renderForm({ initial: named });
+
+    await user.click(day('Weekdays'));
+    expect(screen.getByText('Every week on weekdays')).toBeInTheDocument();
+
+    await user.click(day('Friday')); // off: Mon–Thu
+    expect(screen.getByText('Every week on Mon, Tue, Wed and Thu')).toBeInTheDocument();
+
+    const weeks = screen.getByLabelText('Every how many weeks?');
+    await user.clear(weeks);
+    await user.type(weeks, '3');
+    // The week of the start date (Wed 7 Oct) starts on Monday 5 Oct.
+    expect(
+      screen.getByText(
+        'Every 3rd week on Mon, Tue, Wed and Thu, starting with the week of Mon 5 Oct 2026',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('sends every other week with the weeks counted from the day that was picked', async () => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderForm({ initial: { ...named, recurrence: weekly([1, 4]) } });
+
+    const weeks = screen.getByLabelText('Every how many weeks?');
+    await user.clear(weeks);
+    await user.type(weeks, '2');
+    // Until a day is chosen the field shows the start date, and nothing is sent for it.
+    expect(screen.getByLabelText('Counted from')).toHaveValue('2026-10-07');
+    fireEvent.change(screen.getByLabelText('Counted from'), { target: { value: '2026-10-12' } });
+    await user.click(submitButton());
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recurrence: { kind: 'weekly', weekdays: [1, 4], interval: 2, anchor: '2026-10-12' },
+      }),
+    );
+  });
+
+  it('sends no day of its own for a rhythm that has none, so the server counts from the start', async () => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderForm({ initial: named });
+
+    await user.selectOptions(repeat(), 'everyNDays');
+    const days = screen.getByLabelText('Every how many days?');
+    await user.clear(days);
+    await user.type(days, '3');
+    expect(screen.getByText('Every 3rd day, starting Wed 7 Oct 2026')).toBeInTheDocument();
+    await user.click(submitButton());
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recurrence: { kind: 'everyNDays', interval: 3 } }),
+    );
+  });
+
+  it('keeps the day a rhythm already counts from, whatever the start date becomes', async () => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderForm({
+      initial: {
+        ...named,
+        recurrence: rule({ kind: 'everyNDays', everyDays: 4, anchor: '2026-09-20' }),
+      },
+    });
+
+    fireEvent.change(startDate(), { target: { value: '2026-08-01' } });
+    expect(screen.getByLabelText('Counted from')).toHaveValue('2026-09-20');
+    await user.click(submitButton());
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recurrence: { kind: 'everyNDays', interval: 4, anchor: '2026-09-20' },
+        startDate: '2026-08-01',
+      }),
+    );
+  });
+
+  it('follows the start date while the rhythm has no day of its own', async () => {
+    const user = userEvent.setup();
+    renderForm({ initial: named });
+    await user.selectOptions(repeat(), 'everyNDays');
+
+    fireEvent.change(startDate(), { target: { value: '2026-10-01' } });
+
+    expect(screen.getByLabelText('Counted from')).toHaveValue('2026-10-01');
+  });
+
+  it('sends the weekday of the month', async () => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderForm({ initial: named });
+
+    await user.selectOptions(repeat(), 'monthlyOnWeekday');
+    await user.selectOptions(screen.getByLabelText('Which one?'), 'last');
+    await user.selectOptions(screen.getByLabelText('Weekday'), 'Saturday');
+    expect(screen.getByText('Last Saturday of the month')).toBeInTheDocument();
+    // No "×/week": it is not true of this rule.
+    expect(submitButton()).toHaveAccessibleName('Add habit');
+    await user.click(submitButton());
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recurrence: { kind: 'monthlyOnWeekday', occurrence: 'last', weekday: 6 },
+      }),
+    );
+  });
+
+  it('sends the date of the month, and says what a short month does with a late one', async () => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderForm({ initial: named });
+
+    await user.selectOptions(repeat(), 'monthlyOnDate');
+    await user.selectOptions(screen.getByLabelText('Day of the month'), '30');
+    expect(
+      screen.getByText('On the 30th of the month (the last day of a shorter month)'),
+    ).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Day of the month'), 'Last day');
+    expect(screen.getByText('Last day of the month')).toBeInTheDocument();
+    await user.click(submitButton());
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recurrence: { kind: 'monthlyOnDate', dayOfMonth: 31 } }),
+    );
+  });
+
+  it('remembers what was set for a kind while another one is chosen', async () => {
+    const user = userEvent.setup();
+    renderForm({ initial: { ...named, recurrence: weekly([2, 5]) } });
+
+    await user.selectOptions(repeat(), 'monthlyOnDate');
+    await user.selectOptions(repeat(), 'weekly');
+
+    expect(day('Tuesday')).toHaveAttribute('aria-pressed', 'true');
+    expect(day('Friday')).toHaveAttribute('aria-pressed', 'true');
+    expect(day('Monday')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('does not let a field of another kind stand in the way', async () => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderForm({
+      // "Every how many days" is broken, but the rule is "last Saturday".
+      initial: {
+        ...named,
+        recurrence: rule({
+          kind: 'monthlyOnWeekday',
+          everyDays: null,
+          dayOfMonth: null,
+          weekdays: [],
+        }),
+      },
+    });
+
+    await user.click(submitButton());
+
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ['weekly', 'Every how many weeks?', { everyWeeks: 0 }, 'Use a whole number from 1 to 52.'],
+    ['weekly', 'Every how many weeks?', { everyWeeks: 53 }, 'Use a whole number from 1 to 52.'],
+    ['weekly', 'Every how many weeks?', { everyWeeks: 1.5 }, 'Use a whole number from 1 to 52.'],
+    ['weekly', 'Every how many weeks?', { everyWeeks: null }, 'Use a whole number from 1 to 52.'],
+    ['everyNDays', 'Every how many days?', { everyDays: 1 }, 'Use a whole number from 2 to 365.'],
+    ['everyNDays', 'Every how many days?', { everyDays: 366 }, 'Use a whole number from 2 to 365.'],
+    ['monthlyOnDate', 'Day of the month', { dayOfMonth: 32 }, 'Use a day from 1 to 31.'],
+  ] as const)('does not send %s with %j and says why', async (kind, label, facts, message) => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderForm({
+      initial: { ...named, recurrence: rule({ kind, ...facts }) },
+    });
+
+    await user.click(submitButton());
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(screen.getByLabelText(label)).toHaveAttribute('aria-invalid', 'true');
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['1999-12-31', 'Use a date between 2000 and 2100.'],
+    ['2101-01-01', 'Use a date between 2000 and 2100.'],
+    ['not a date', 'Pick a date.'],
+  ])('does not send a rhythm counted from "%s"', async (anchor, message) => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderForm({
+      initial: { ...named, recurrence: rule({ kind: 'everyNDays', anchor }) },
+    });
+
+    await user.click(submitButton());
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('shows the server’s one "interval" under the weeks or the days, whichever is chosen', async () => {
+    const user = userEvent.setup();
+    renderForm({
+      initial: { ...named, recurrence: rule({ kind: 'everyNDays', everyDays: 3 }) },
+      onSubmit: () =>
+        Promise.reject(apiError(400, { fieldErrors: { 'recurrence.interval': ['Too often.'] } })),
+    });
+
+    await user.click(submitButton());
+
+    expect(await screen.findByText('Too often.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Every how many days?')).toHaveAccessibleDescription(
+      /Too often\./,
+    );
+  });
+
+  describe('when a habit is edited', () => {
+    const saved = { ...named, recurrence: weekly([1, 3]) };
+
+    it('says nothing while the rule is as it was', async () => {
+      const user = userEvent.setup();
+      renderForm({ initial: saved, editing: true });
+
+      await user.type(title(), ' more'); // not the rule
+      fireEvent.change(startDate(), { target: { value: '2026-09-01' } });
+
+      expect(screen.queryByText(/also applies to days that have passed/)).toBeNull();
+    });
+
+    it('says that a different rule re-judges the days that have passed', async () => {
+      const user = userEvent.setup();
+      renderForm({ initial: saved, editing: true });
+
+      await user.click(day('Friday'));
+
+      expect(screen.getByText(/also applies to days that have passed/)).toBeInTheDocument();
+
+      await user.click(day('Friday')); // back to what it was
+      expect(screen.queryByText(/also applies to days that have passed/)).toBeNull();
+    });
+
+    it('does not say it for a new habit, which has no past to judge', async () => {
+      const user = userEvent.setup();
+      renderForm({ initial: named });
+
+      await user.selectOptions(repeat(), 'everyNDays');
+
+      expect(screen.queryByText(/also applies to days that have passed/)).toBeNull();
+    });
   });
 });

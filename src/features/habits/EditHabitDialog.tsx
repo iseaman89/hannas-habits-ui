@@ -74,6 +74,7 @@ function EditHabitContent({
       submitLabel="Save changes"
       onSubmit={submit}
       onCancel={onClose}
+      editing
     />
   );
 }

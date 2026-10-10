@@ -402,7 +402,12 @@ describe('adding a habit', () => {
 
     expect(await screen.findByRole('rowheader', { name: /Meditate/ })).toBeInTheDocument();
     expect(fake.calls.create).toEqual([
-      { title: 'Meditate', description: null, schedule: [1, 2, 3, 4, 5], startDate: '2026-10-07' },
+      {
+        title: 'Meditate',
+        description: null,
+        recurrence: { kind: 'weekly', weekdays: [1, 2, 3, 4, 5], interval: 1 },
+        startDate: '2026-10-07',
+      },
     ]);
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByRole('status')).toHaveTextContent('Habit added');
@@ -478,7 +483,7 @@ describe('editing a habit', () => {
         input: {
           title: 'Stretch more',
           description: 'Ten minutes, every morning',
-          schedule: [1, 2, 3, 4, 5, 6],
+          recurrence: { kind: 'weekly', weekdays: [1, 2, 3, 4, 5, 6], interval: 1 },
           startDate: '2026-10-01',
         },
       },
@@ -538,7 +543,7 @@ describe('editing a habit', () => {
     await fake.gateway.update('h-stretch', {
       title: 'Stretch and breathe',
       description: null,
-      schedule: [1],
+      recurrence: { kind: 'weekly', weekdays: [1], interval: 1 },
       startDate: '2026-10-01',
     });
     const second = await openEdit(user, 'Stretch');
@@ -613,5 +618,181 @@ describe('deleting a habit', () => {
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Not today.');
     expect(screen.getByRole('rowheader', { name: /Read/ })).toBeInTheDocument();
+  });
+});
+
+describe('recurrence rules', () => {
+  // Saturday 31 October is the last Saturday of the month; Saturday 17 the third one.
+  const lastSaturday: FakeHabit = {
+    id: 'h-market',
+    title: 'Market day',
+    recurrence: {
+      kind: 'monthlyOnWeekday',
+      weekdays: [],
+      interval: 1,
+      anchor: null,
+      occurrence: 'last',
+      weekday: 6,
+      dayOfMonth: null,
+    },
+    startDate: '2026-09-01',
+    completed: [],
+  };
+
+  async function openEdit(user: ReturnType<typeof userEvent.setup>, title: string) {
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: `Edit ${title}` }));
+    return screen.findByRole('dialog', { name: 'Edit habit' });
+  }
+
+  it('draws the days the server names as due, and the rule in words under the habit', async () => {
+    const fake = fakeHabits([lastSaturday]);
+    renderPage(fake);
+    await screen.findByRole('table');
+
+    expect(within(rowOf('Market day')).getByText('Last Saturday of the month')).toBeInTheDocument();
+    // The 31st is the one day; every other Saturday is not on the plan, and no weekday logic of
+    // the client may decide otherwise.
+    expect(
+      screen.getByRole('img', { name: 'Market day, Sat 31 Oct: upcoming' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Market day, Sat 10 Oct: not scheduled' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Market day, Sun 4 Oct: not scheduled' }),
+    ).toBeInTheDocument();
+  });
+
+  it('follows the server when a day the rule names is today: tickable, and counted', async () => {
+    const onToday: FakeHabit = {
+      ...lastSaturday,
+      id: 'h-monthly',
+      title: 'Pay rent',
+      recurrence: {
+        ...lastSaturday.recurrence!,
+        kind: 'monthlyOnDate',
+        dayOfMonth: 7,
+        weekday: null,
+        occurrence: null,
+      },
+    };
+    const user = userEvent.setup();
+    const fake = fakeHabits([onToday]);
+    renderPage(fake);
+
+    await user.click(await screen.findByRole('button', { name: 'Pay rent, Wed 7 Oct' }));
+
+    expect(fake.marksOf('h-monthly')).toEqual(['2026-10-07']);
+  });
+
+  it('adds a habit that repeats every other week, counted from its start date', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([stretch]);
+    renderPage(fake);
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: 'New habit' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New habit' });
+
+    await user.type(within(dialog).getByLabelText('What do you want to do?'), 'Laundry');
+    await user.click(within(dialog).getByRole('button', { name: 'Weekends' }));
+    const weeks = within(dialog).getByLabelText('Every how many weeks?');
+    await user.clear(weeks);
+    await user.type(weeks, '2');
+
+    expect(
+      within(dialog).getByText(
+        'Every 2nd week on weekends, starting with the week of Mon 5 Oct 2026',
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Add habit' }));
+
+    await waitFor(() => expect(fake.calls.create).toHaveLength(1));
+    // No anchor of its own: the server counts from the start date it saves.
+    expect(fake.calls.create[0]?.recurrence).toEqual({
+      kind: 'weekly',
+      weekdays: [6, 0],
+      interval: 2,
+    });
+    // This week (Sat 10, Sun 11 are not before the start: it starts Wed 7): due. The next ones are not.
+    expect(
+      await screen.findByRole('img', { name: 'Laundry, Sat 10 Oct: upcoming' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Laundry, Sat 17 Oct: not scheduled' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Laundry, Sat 24 Oct: upcoming' })).toBeInTheDocument();
+  });
+
+  it('saves a changed rule, says it re-judges the past, and redraws the grid from the server', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([stretch]);
+    renderPage(fake);
+    const dialog = await openEdit(user, 'Stretch');
+    await within(dialog).findByLabelText('What do you want to do?');
+    // Nothing changed yet: nothing to warn about.
+    expect(within(dialog).queryByText(/also applies to days that have passed/)).toBeNull();
+
+    await user.selectOptions(within(dialog).getByLabelText('Repeat'), 'monthlyOnWeekday');
+    await user.selectOptions(within(dialog).getByLabelText('Which one?'), 'last');
+    await user.selectOptions(within(dialog).getByLabelText('Weekday'), 'Saturday');
+
+    expect(within(dialog).getByText('Last Saturday of the month')).toBeInTheDocument();
+    expect(within(dialog).getByText(/also applies to days that have passed/)).toBeInTheDocument();
+    // "3×/week" is not true of this rule.
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() =>
+      expect(fake.calls.update[0]?.input.recurrence).toEqual({
+        kind: 'monthlyOnWeekday',
+        occurrence: 'last',
+        weekday: 6,
+      }),
+    );
+    // Monday 5 Oct was done, and is not due any more: kept on the server, drawn as not scheduled.
+    expect(
+      await screen.findByRole('img', { name: 'Stretch, Mon 5 Oct: not scheduled' }),
+    ).toBeInTheDocument();
+    expect(fake.marksOf('h-stretch')).toEqual(['2026-10-05', '2026-10-06']);
+  });
+
+  it('keeps the rhythm of a habit when its start date is moved', async () => {
+    const everyOtherWeek: FakeHabit = {
+      id: 'h-bins',
+      title: 'Bins out',
+      recurrence: {
+        kind: 'weekly',
+        weekdays: [3],
+        interval: 2,
+        anchor: '2026-10-07',
+        occurrence: null,
+        weekday: null,
+        dayOfMonth: null,
+      },
+      startDate: '2026-10-01',
+      completed: [],
+    };
+    const user = userEvent.setup();
+    const fake = fakeHabits([everyOtherWeek]);
+    renderPage(fake);
+    const dialog = await openEdit(user, 'Bins out');
+    await within(dialog).findByLabelText('What do you want to do?');
+
+    fireEvent.change(within(dialog).getByLabelText('Starts on'), {
+      target: { value: '2026-09-01' },
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    // The anchor it had goes back as it was - not the new start date.
+    await waitFor(() =>
+      expect(fake.calls.update[0]?.input.recurrence).toEqual({
+        kind: 'weekly',
+        weekdays: [3],
+        interval: 2,
+        anchor: '2026-10-07',
+      }),
+    );
+    expect(fake.calls.update[0]?.input.startDate).toBe('2026-09-01');
   });
 });
