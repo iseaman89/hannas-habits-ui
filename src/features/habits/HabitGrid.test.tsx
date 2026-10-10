@@ -2,16 +2,28 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HabitGrid } from './HabitGrid';
-import { weeklyRecurrence } from '@/test/recurrence';
+import { isDue, weeklyRecurrence, type Recurrence } from '@/test/recurrence';
 import type { HabitOverview } from './habitsGateway';
+
+// What the server would answer in `scheduledDates` for October 2026: the days the rule makes due,
+// none before the start.
+const OCTOBER = Array.from(
+  { length: 31 },
+  (_, index) => `2026-10-${String(index + 1).padStart(2, '0')}`,
+);
+const dueDays = (rule: Recurrence, startDate: string) =>
+  OCTOBER.filter((day) => day >= startDate && isDue(rule, day));
+
+const everyDay = weeklyRecurrence([0, 1, 2, 3, 4, 5, 6]);
+const monWedFri = weeklyRecurrence([1, 3, 5]);
 
 const stretch: HabitOverview = {
   id: 'h-1',
   title: 'Stretch',
   schedule: [0, 1, 2, 3, 4, 5, 6],
-  recurrence: weeklyRecurrence([0, 1, 2, 3, 4, 5, 6]),
+  recurrence: everyDay,
   startDate: '2026-10-01',
-  scheduledDates: [], // the grid reads the weekdays until F11
+  scheduledDates: dueDays(everyDay, '2026-10-01'),
   completedDates: ['2026-10-05'],
   currentStreak: 4,
 };
@@ -20,9 +32,9 @@ const read: HabitOverview = {
   id: 'h-2',
   title: 'Read',
   schedule: [1, 3, 5],
-  recurrence: weeklyRecurrence([1, 3, 5]),
+  recurrence: monWedFri,
   startDate: '2026-10-01',
-  scheduledDates: [],
+  scheduledDates: dueDays(monWedFri, '2026-10-01'),
   completedDates: [],
   currentStreak: 0,
 };
@@ -150,6 +162,53 @@ describe('HabitGrid', () => {
 
     expect(onEdit).toHaveBeenCalledWith(read);
     expect(onDelete).toHaveBeenCalledWith(stretch);
+  });
+
+  it('draws the days the server lists as due, not the days of the weekday list', () => {
+    // The weekday list says every day, the server says only the 9th: the server is the rule.
+    renderGrid({ habits: [{ ...stretch, scheduledDates: ['2026-10-09'], completedDates: [] }] });
+
+    expect(
+      screen.getByRole('img', { name: 'Stretch, Tue 6 Oct: not scheduled' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Stretch, Fri 9 Oct: upcoming' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Stretch, Tue 6 Oct' })).not.toBeInTheDocument();
+  });
+
+  it('still calls a day before the start "before the habit started" when it is not due either', () => {
+    renderGrid({ habits: [{ ...read, startDate: '2026-10-05', scheduledDates: ['2026-10-07'] }] });
+
+    expect(
+      screen.getByRole('img', { name: 'Read, Fri 2 Oct: before the habit started' }),
+    ).toBeInTheDocument();
+  });
+
+  it.each<[string, Recurrence, string]>([
+    [
+      'every other week',
+      { ...weeklyRecurrence([1, 4]), interval: 2, anchor: '2026-10-05' },
+      'Every 2nd week on Mon and Thu',
+    ],
+    [
+      'every 3rd day',
+      { ...weeklyRecurrence([]), kind: 'everyNDays', interval: 3, anchor: '2026-10-01' },
+      'Every 3rd day',
+    ],
+    [
+      'the last Saturday',
+      { ...weeklyRecurrence([]), kind: 'monthlyOnWeekday', occurrence: 'last', weekday: 6 },
+      'Last Saturday of the month',
+    ],
+    [
+      'the 15th',
+      { ...weeklyRecurrence([]), kind: 'monthlyOnDate', dayOfMonth: 15 },
+      'On the 15th of the month',
+    ],
+  ])('names the rule under the habit: %s', (_name, recurrence, label) => {
+    renderGrid({ habits: [{ ...read, recurrence, scheduledDates: [] }] });
+
+    const row = screen.getByRole('rowheader', { name: /^Read/ }).closest('tr') as HTMLElement;
+    expect(within(row).getByText(label)).toBeInTheDocument();
   });
 
   it('ignores a mark on a day that is not planned, instead of drawing it', () => {

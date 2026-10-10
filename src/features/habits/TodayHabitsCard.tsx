@@ -26,8 +26,9 @@ interface HabitOfTheDay {
  * side panel. It asks for the overview of just that day (`from = to = date`) and shares the
  * cache and the marking with the month grid, so a tick here shows in the grid and the other way
  * round. What counts for the day is `cellState`, the same rule as the grid: a habit that did
- * not exist yet, or is not planned for that weekday, is left out. The streak shown is the
- * current one as of the real today, not of the day that is on screen.
+ * not exist yet, or is not due that day (whatever its rule - weekdays, every N weeks, monthly),
+ * is left out. The streak shown is the current one as of the real today, not of the day that
+ * is on screen.
  */
 export function TodayHabitsCard({ date, gateway = habitsGateway }: TodayHabitsCardProps) {
   const today = toApiDate(useToday());
@@ -45,7 +46,7 @@ export function TodayHabitsCard({ date, gateway = habitsGateway }: TodayHabitsCa
               date: day,
               today,
               startDate: habit.startDate,
-              schedule: habit.schedule,
+              scheduled: habit.scheduledDates.includes(date),
               done: habit.completedDates.includes(date),
             }),
           }))

@@ -10,7 +10,8 @@ import type { HabitOverview } from './habitsGateway';
 import { scrollLeftToCenter } from './gridScroll';
 import { daysOfMonth } from './months';
 import { StreakBadge } from './StreakBadge';
-import { dayName, scheduleLabel, type DayOfWeek } from './weekdays';
+import { recurrenceLabel, toRecurrenceValues } from './recurrence';
+import { dayName, type DayOfWeek } from './weekdays';
 
 interface HabitGridProps {
   habits: readonly HabitOverview[];
@@ -124,6 +125,8 @@ interface HabitRowProps extends Pick<HabitGridProps, 'today' | 'onToggle' | 'onE
 
 function HabitRow({ habit, days, today, onToggle, onEdit, onDelete }: HabitRowProps) {
   const done = new Set(habit.completedDates);
+  const due = new Set(habit.scheduledDates);
+  const rule = recurrenceLabel(toRecurrenceValues(habit.recurrence));
 
   return (
     <tr className="[&>*]:border-t [&>*]:border-divider">
@@ -134,8 +137,8 @@ function HabitRow({ habit, days, today, onToggle, onEdit, onDelete }: HabitRowPr
             <p className="truncate font-bold" title={habit.title}>
               {habit.title}
             </p>
-            <p className="truncate text-xs text-neutral-700 sm:text-sm">
-              {scheduleLabel(habit.schedule)}
+            <p className="truncate text-xs text-neutral-700 sm:text-sm" title={rule}>
+              {rule}
             </p>
           </div>
           <div className="flex">
@@ -155,7 +158,7 @@ function HabitRow({ habit, days, today, onToggle, onEdit, onDelete }: HabitRowPr
           date,
           today,
           startDate: habit.startDate,
-          schedule: habit.schedule,
+          scheduled: due.has(key),
           done: isDone,
         });
         return (
