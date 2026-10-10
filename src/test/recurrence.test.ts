@@ -1,6 +1,12 @@
 import { eachDayOfInterval, format, parseISO } from 'date-fns';
 import { describe, expect, it } from 'vitest';
-import { isDue, recurrenceOf, weeklyRecurrence, type Recurrence } from './recurrence';
+import {
+  isDue,
+  quotaPeriodsOf,
+  recurrenceOf,
+  weeklyRecurrence,
+  type Recurrence,
+} from './recurrence';
 
 // The stand-in server's rules are only worth something if they agree with a calendar. October
 // 2026 starts on a Thursday, November on a Sunday, February 2028 has 29 days.
@@ -88,6 +94,91 @@ describe('isDue', () => {
     [31, '2026-10-01', '2026-10-31', ['2026-10-31']],
   ])('monthly on the %ith: %s to %s', (dayOfMonth, from, to, expected) => {
     expect(dueDays(rule({ kind: 'monthlyOnDate', dayOfMonth }), from, to)).toEqual(expected);
+  });
+});
+
+describe('a quota', () => {
+  const perWeek = rule({ kind: 'timesPerWeek', times: 3 });
+  const perMonth = rule({ kind: 'timesPerMonth', times: 2 });
+  const marks = (...days: string[]) => new Set(days);
+
+  it('has no due day: every day can be ticked', () => {
+    expect(dueDays(perWeek, '2026-10-01', '2026-10-04')).toEqual([
+      '2026-10-01',
+      '2026-10-02',
+      '2026-10-03',
+      '2026-10-04',
+    ]);
+    expect(dueDays(perMonth, '2026-10-30', '2026-11-01')).toHaveLength(3);
+  });
+
+  it('is made from a request with its count', () => {
+    expect(recurrenceOf({ kind: 'timesPerWeek', times: 4 }, '2026-10-01')).toMatchObject({
+      kind: 'timesPerWeek',
+      times: 4,
+      weekdays: [],
+      anchor: null,
+    });
+    expect(recurrenceOf({ kind: 'timesPerMonth', times: 9 }, '2026-10-01').times).toBe(9);
+  });
+
+  it('has the weeks of a calendar, Monday to Sunday, whole - also where they leave the range', () => {
+    // October 2026 starts on a Thursday: the first week began on Monday 28 September.
+    expect(
+      quotaPeriodsOf(
+        perWeek,
+        '2026-09-01',
+        marks('2026-09-29', '2026-10-05'),
+        '2026-10-01',
+        '2026-10-31',
+      ),
+    ).toEqual([
+      { from: '2026-09-28', to: '2026-10-04', done: 1 },
+      { from: '2026-10-05', to: '2026-10-11', done: 1 },
+      { from: '2026-10-12', to: '2026-10-18', done: 0 },
+      { from: '2026-10-19', to: '2026-10-25', done: 0 },
+      { from: '2026-10-26', to: '2026-11-01', done: 0 },
+    ]);
+  });
+
+  it('does not count days before the start, and leaves out a period that ended before it', () => {
+    const periods = quotaPeriodsOf(
+      perWeek,
+      '2026-10-08',
+      marks('2026-10-05', '2026-10-08'),
+      '2026-10-01',
+      '2026-10-31',
+    );
+
+    expect(periods[0]).toEqual({ from: '2026-10-05', to: '2026-10-11', done: 1 });
+    expect(periods).toHaveLength(4);
+  });
+
+  it('has the calendar months of the range', () => {
+    expect(
+      quotaPeriodsOf(
+        perMonth,
+        '2026-01-01',
+        marks('2026-09-20', '2026-10-02'),
+        '2026-09-15',
+        '2026-10-15',
+      ),
+    ).toEqual([
+      { from: '2026-09-01', to: '2026-09-30', done: 1 },
+      { from: '2026-10-01', to: '2026-10-31', done: 1 },
+    ]);
+  });
+
+  it('has none for a rule with due days', () => {
+    expect(
+      quotaPeriodsOf(
+        weeklyRecurrence([1]),
+        '2026-01-01',
+        marks('2026-10-05'),
+        '2026-10-01',
+        '2026-10-31',
+      ),
+    ).toEqual([]);
   });
 });
 

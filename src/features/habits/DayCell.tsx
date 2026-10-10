@@ -12,6 +12,8 @@ const faceStyles: Record<CellState, string> = {
   missed: 'bg-miss',
   'due-today': 'border-[2.5px] border-accent',
   upcoming: 'border-[1.5px] border-neutral-400',
+  // The same empty ring as a day to come: nothing is owed on this day, but it can be ticked.
+  open: 'border-[1.5px] border-neutral-400',
   'not-scheduled': `${dot} after:bg-neutral-400`,
   'before-start': `${dot} after:bg-neutral-300`,
 };
@@ -22,6 +24,7 @@ const stateText: Record<CellState, string> = {
   missed: 'missed',
   'due-today': 'due today',
   upcoming: 'upcoming',
+  open: 'not done',
   'not-scheduled': 'not scheduled',
   'before-start': 'before the habit started',
 };

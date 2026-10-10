@@ -1,4 +1,14 @@
-import { differenceInCalendarDays, differenceInCalendarWeeks, getDaysInMonth } from 'date-fns';
+import {
+  addDays,
+  differenceInCalendarDays,
+  differenceInCalendarWeeks,
+  endOfMonth,
+  endOfWeek,
+  format,
+  getDaysInMonth,
+  startOfMonth,
+  startOfWeek,
+} from 'date-fns';
 import type { Recurrence, RecurrenceRequest } from '@/features/habits/recurrence';
 import type { DayOfWeek } from '@/features/habits/weekdays';
 
@@ -14,6 +24,7 @@ export function weeklyRecurrence(weekdays: readonly DayOfWeek[]): Recurrence {
     occurrence: null,
     weekday: null,
     dayOfMonth: null,
+    times: null,
   };
 }
 
@@ -43,6 +54,13 @@ export function recurrenceOf(request: RecurrenceRequest, startDate: string): Rec
         kind: 'monthlyOnDate',
         dayOfMonth: request.dayOfMonth ?? 1,
       };
+    case 'timesPerWeek':
+    case 'timesPerMonth':
+      return {
+        ...weeklyRecurrence([]),
+        kind: request.kind,
+        times: request.times ?? 1,
+      };
     default: {
       const interval = request.interval ?? 1;
       return {
@@ -63,7 +81,7 @@ function dayOf(text: string): Date {
 const NTH = ['first', 'second', 'third', 'fourth'];
 
 /**
- * Is the rule due on this day? The four rules of the backend's `HabitSchedule`, written out again
+ * Is the rule due on this day? The rules of the backend's `HabitSchedule`, written out again
  * for the stand-in server - small enough to read at a glance, and checked in `recurrence.test.ts`
  * against dates that can be looked up in a calendar. Weeks start on Monday.
  */
@@ -90,5 +108,46 @@ export function isDue(rule: Recurrence, day: string): boolean {
       // A month without that date uses its last day.
       return date.getDate() === Math.min(rule.dayOfMonth ?? 1, getDaysInMonth(date));
     }
+    case 'timesPerWeek':
+    case 'timesPerMonth':
+      // A quota has no due day: every day can be ticked (the server lists them all).
+      return true;
   }
+}
+
+/**
+ * The weeks (Monday to Sunday) or months of a quota habit that touch `from..to`, with the days
+ * `completed` in each from the start date on - the stand-in for the server's `quotaPeriods`. A
+ * period that ended before the start is left out. Empty for any other rule.
+ */
+export function quotaPeriodsOf(
+  rule: Recurrence,
+  startDate: string,
+  completed: ReadonlySet<string>,
+  from: string,
+  to: string,
+): { from: string; to: string; done: number }[] {
+  if (rule.kind !== 'timesPerWeek' && rule.kind !== 'timesPerMonth') return [];
+
+  const week = rule.kind === 'timesPerWeek';
+  const periods: { from: string; to: string; done: number }[] = [];
+  let first = dayOf(from);
+  const last = dayOf(to);
+
+  while (first <= last) {
+    const start = week ? startOfWeek(first, { weekStartsOn: 1 }) : startOfMonth(first);
+    const end = week ? endOfWeek(first, { weekStartsOn: 1 }) : endOfMonth(first);
+    const periodFrom = format(start, 'yyyy-MM-dd');
+    const periodTo = format(end, 'yyyy-MM-dd');
+
+    if (periodTo >= startDate) {
+      const done = [...completed].filter(
+        (day) => day >= periodFrom && day <= periodTo && day >= startDate,
+      ).length;
+      periods.push({ from: periodFrom, to: periodTo, done });
+    }
+    first = addDays(end, 1);
+  }
+
+  return periods;
 }

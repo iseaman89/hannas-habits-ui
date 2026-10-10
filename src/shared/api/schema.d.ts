@@ -1947,6 +1947,7 @@ export interface components {
             scheduledDates: string[];
             completedDates: string[];
             taggedDays: components["schemas"]["TaggedDayDto"][];
+            quotaPeriods: components["schemas"]["QuotaPeriodDto"][];
             /** Format: int32 */
             currentStreak: number;
         };
@@ -1985,6 +1986,14 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        QuotaPeriodDto: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: int32 */
+            done: number;
+        };
         RecurrenceDto: {
             kind: components["schemas"]["ScheduleKind"];
             weekdays: components["schemas"]["DayOfWeek"][];
@@ -1996,6 +2005,8 @@ export interface components {
             weekday: components["schemas"]["DayOfWeek"] | null;
             /** Format: int32 */
             dayOfMonth: number | null;
+            /** Format: int32 */
+            times: number | null;
         };
         RecurrenceRequest: {
             kind?: components["schemas"]["ScheduleKind"] | null;
@@ -2008,6 +2019,8 @@ export interface components {
             weekday?: components["schemas"]["DayOfWeek"] | null;
             /** Format: int32 */
             dayOfMonth?: number | null;
+            /** Format: int32 */
+            times?: number | null;
         };
         RefreshRequest: {
             refreshToken?: string;
@@ -2051,7 +2064,7 @@ export interface components {
             tasks?: components["schemas"]["DiaryTaskDto"][] | null;
         };
         /** @enum {string} */
-        ScheduleKind: "weekly" | "everyNDays" | "monthlyOnWeekday" | "monthlyOnDate";
+        ScheduleKind: "weekly" | "everyNDays" | "monthlyOnWeekday" | "monthlyOnDate" | "timesPerWeek" | "timesPerMonth";
         TagDto: {
             /** Format: uuid */
             id: string;

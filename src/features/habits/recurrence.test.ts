@@ -4,6 +4,7 @@ import {
   recurrenceLabel,
   recurrenceSummary,
   sameRecurrence,
+  timesPhrase,
   toRecurrenceRequest,
   toRecurrenceValues,
   type Recurrence,
@@ -24,6 +25,7 @@ const answer = (changes: Partial<Recurrence>): Recurrence => ({
   occurrence: null,
   weekday: null,
   dayOfMonth: null,
+  times: null,
   ...changes,
 });
 
@@ -90,12 +92,34 @@ describe('recurrenceLabel (under the habit)', () => {
     ['the 15th', { kind: 'monthlyOnDate', dayOfMonth: 15 }, 'On the 15th of the month'],
     ['the 2nd', { kind: 'monthlyOnDate', dayOfMonth: 2 }, 'On the 2nd of the month'],
     ['the last day', { kind: 'monthlyOnDate', dayOfMonth: 31 }, 'Last day of the month'],
+    ['once a week', { kind: 'timesPerWeek', times: 1 }, 'Once a week'],
+    ['twice a week', { kind: 'timesPerWeek', times: 2 }, 'Twice a week'],
+    ['3 times a week', { kind: 'timesPerWeek', times: 3 }, '3 times a week'],
+    ['every day a week', { kind: 'timesPerWeek', times: 7 }, '7 times a week'],
+    ['once a month', { kind: 'timesPerMonth', times: 1 }, 'Once a month'],
+    ['twice a month', { kind: 'timesPerMonth', times: 2 }, 'Twice a month'],
+    ['8 times a month', { kind: 'timesPerMonth', times: 8 }, '8 times a month'],
   ])('%s', (_name, changes, label) => {
     expect(recurrenceLabel(rule(changes))).toBe(label);
   });
 
+  it('says "once" for a count that is still empty', () => {
+    expect(recurrenceLabel(rule({ kind: 'timesPerWeek', times: null }))).toBe('Once a week');
+  });
+
   it('names the weeks for an empty number as "every week"', () => {
     expect(recurrenceLabel(rule({ weekdays: [1], everyWeeks: null }))).toBe('Mon');
+  });
+});
+
+describe('timesPhrase', () => {
+  it.each([
+    [1, 'Once'],
+    [2, 'Twice'],
+    [3, '3 times'],
+    [28, '28 times'],
+  ])('%i is %s', (times, text) => {
+    expect(timesPhrase(times)).toBe(text);
   });
 });
 
@@ -138,6 +162,16 @@ describe('recurrenceSummary (in the form)', () => {
       'On the 30th of the month (the last day of a shorter month)',
     ],
     ['the last day', { kind: 'monthlyOnDate', dayOfMonth: 31 }, 'Last day of the month'],
+    [
+      'a number of times a week',
+      { kind: 'timesPerWeek', times: 3 },
+      '3 times a week, on whichever days - the week runs Monday to Sunday',
+    ],
+    [
+      'a number of times a month',
+      { kind: 'timesPerMonth', times: 2 },
+      'Twice a month, on whichever days - the calendar month counts',
+    ],
   ])('%s', (_name, changes, text) => {
     expect(recurrenceSummary(rule(changes), START)).toBe(text);
   });
@@ -185,6 +219,16 @@ describe('toRecurrenceRequest', () => {
       { kind: 'monthlyOnDate', dayOfMonth: 15, everyDays: 9 },
       { kind: 'monthlyOnDate', dayOfMonth: 15 },
     ],
+    [
+      'times a week sends the count and nothing of the other facts',
+      { kind: 'timesPerWeek', times: 3, weekdays: [1], everyWeeks: 2, anchor: '2026-10-05' },
+      { kind: 'timesPerWeek', times: 3 },
+    ],
+    [
+      'times a month',
+      { kind: 'timesPerMonth', times: 8, dayOfMonth: 5 },
+      { kind: 'timesPerMonth', times: 8 },
+    ],
   ])('%s', (_name, changes, request) => {
     expect(toRecurrenceRequest(rule(changes))).toEqual(request);
   });
@@ -203,6 +247,18 @@ describe('toRecurrenceValues', () => {
     ).toEqual(rule({ kind: 'monthlyOnWeekday', occurrence: 'last', weekday: 6 }));
     expect(toRecurrenceValues(answer({ kind: 'monthlyOnDate', dayOfMonth: 31 }))).toEqual(
       rule({ kind: 'monthlyOnDate', dayOfMonth: 31 }),
+    );
+    expect(toRecurrenceValues(answer({ kind: 'timesPerWeek', times: 4 }))).toEqual(
+      rule({ kind: 'timesPerWeek', times: 4 }),
+    );
+    expect(toRecurrenceValues(answer({ kind: 'timesPerMonth', times: 12 }))).toEqual(
+      rule({ kind: 'timesPerMonth', times: 12 }),
+    );
+  });
+
+  it('gives a rule without a count the default one, so switching to a quota starts somewhere', () => {
+    expect(toRecurrenceValues(answer({ kind: 'monthlyOnDate', dayOfMonth: 5 })).times).toBe(
+      DEFAULT_RECURRENCE.times,
     );
   });
 
@@ -242,6 +298,16 @@ describe('sameRecurrence', () => {
     expect(sameRecurrence(base, rule({ ...base, anchor: '2026-10-12' }))).toBe(false);
     expect(sameRecurrence(base, rule({ ...base, kind: 'everyNDays' }))).toBe(false);
   });
+
+  it('tells a quota from another count, and the week from the month', () => {
+    const perWeek = rule({ kind: 'timesPerWeek', times: 3 });
+
+    expect(sameRecurrence(perWeek, rule({ kind: 'timesPerWeek', times: 3, weekdays: [2] }))).toBe(
+      true,
+    );
+    expect(sameRecurrence(perWeek, rule({ kind: 'timesPerWeek', times: 4 }))).toBe(false);
+    expect(sameRecurrence(perWeek, rule({ kind: 'timesPerMonth', times: 3 }))).toBe(false);
+  });
 });
 
 describe('recurrenceSchema', () => {
@@ -258,6 +324,10 @@ describe('recurrenceSchema', () => {
     expect(valid({ kind: 'monthlyOnDate', dayOfMonth: 31 })).toBe(true);
     expect(valid({ kind: 'weekly', everyWeeks: 2, anchor: '2000-01-01' })).toBe(true);
     expect(valid({ kind: 'weekly', everyWeeks: 2, anchor: '2100-12-31' })).toBe(true);
+    expect(valid({ kind: 'timesPerWeek', times: 1 })).toBe(true);
+    expect(valid({ kind: 'timesPerWeek', times: 7 })).toBe(true);
+    expect(valid({ kind: 'timesPerMonth', times: 1 })).toBe(true);
+    expect(valid({ kind: 'timesPerMonth', times: 28 })).toBe(true);
   });
 
   it.each<[string, Partial<RecurrenceValues>]>([
@@ -274,6 +344,13 @@ describe('recurrenceSchema', () => {
     ['an anchor before 2000', { kind: 'everyNDays', everyDays: 3, anchor: '1999-12-31' }],
     ['an anchor after 2100', { kind: 'everyNDays', everyDays: 3, anchor: '2101-01-01' }],
     ['an anchor that is not a day', { kind: 'everyNDays', everyDays: 3, anchor: '2026-02-30' }],
+    ['0 times a week', { kind: 'timesPerWeek', times: 0 }],
+    ['8 times a week', { kind: 'timesPerWeek', times: 8 }],
+    ['no count a week', { kind: 'timesPerWeek', times: null }],
+    ['2.5 times a week', { kind: 'timesPerWeek', times: 2.5 }],
+    ['0 times a month', { kind: 'timesPerMonth', times: 0 }],
+    ['29 times a month', { kind: 'timesPerMonth', times: 29 }],
+    ['no count a month', { kind: 'timesPerMonth', times: null }],
   ])('refuses %s', (_name, changes) => {
     expect(valid(changes)).toBe(false);
   });
@@ -291,6 +368,11 @@ describe('recurrenceSchema', () => {
     // A day to count from means nothing for "every week", so a bad one is not a problem there.
     expect(valid({ everyWeeks: 1, anchor: 'garbage' })).toBe(true);
     expect(valid({ everyWeeks: 2, anchor: 'garbage' })).toBe(false);
+  });
+
+  it('lets a month hold more than a week does, and the other way round is refused', () => {
+    expect(valid({ kind: 'timesPerMonth', times: 12 })).toBe(true);
+    expect(valid({ kind: 'timesPerWeek', times: 12 })).toBe(false);
   });
 
   it('names the fact that is wrong', () => {

@@ -634,6 +634,7 @@ describe('recurrence rules', () => {
       occurrence: 'last',
       weekday: 6,
       dayOfMonth: null,
+      times: null,
     },
     startDate: '2026-09-01',
     completed: [],
@@ -769,6 +770,7 @@ describe('recurrence rules', () => {
         occurrence: null,
         weekday: null,
         dayOfMonth: null,
+        times: null,
       },
       startDate: '2026-10-01',
       completed: [],
@@ -794,5 +796,152 @@ describe('recurrence rules', () => {
       }),
     );
     expect(fake.calls.update[0]?.input.startDate).toBe('2026-09-01');
+  });
+});
+
+describe('a quota ("3 times a week")', () => {
+  // Today is Wednesday 7 October: the week of 5 - 11 October has two of its three.
+  const gym: FakeHabit = {
+    id: 'h-gym',
+    title: 'Gym',
+    recurrence: {
+      kind: 'timesPerWeek',
+      weekdays: [],
+      interval: 1,
+      anchor: null,
+      occurrence: null,
+      weekday: null,
+      dayOfMonth: null,
+      times: 3,
+    },
+    startDate: '2026-09-01',
+    completed: ['2026-10-05', '2026-10-06'],
+  };
+
+  it('says the rule and how far this week has come, and counts the streak in weeks', async () => {
+    const fake = fakeHabits([gym]);
+    renderPage(fake);
+    await screen.findByRole('table');
+
+    expect(within(rowOf('Gym')).getByText('3 times a week · 2 of 3 this week')).toBeInTheDocument();
+    expect(streakOf('Gym')).toBe('Current streak: 2 weeks');
+  });
+
+  it('draws no day as missed: a past day that was not ticked is open and can be ticked', async () => {
+    const fake = fakeHabits([gym]);
+    renderPage(fake);
+    await screen.findByRole('table');
+
+    // Fri 2 Oct was neither done nor "due": the server lists it, and it is open.
+    expect(cell('Gym, Fri 2 Oct')).toHaveAttribute('aria-pressed', 'false');
+    expect(cell('Gym, Mon 5 Oct')).toHaveAttribute('aria-pressed', 'true');
+    expect(cell('Gym, Wed 7 Oct')).toHaveAttribute('aria-pressed', 'false'); // today
+    expect(screen.queryByRole('img', { name: /Gym.*missed/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Gym, Thu 8 Oct: upcoming' })).toBeInTheDocument();
+  });
+
+  it('moves the number of the week at once when a day is ticked, and the streak after the answer', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([gym]);
+    renderPage(fake);
+    await screen.findByRole('table');
+
+    await user.click(cell('Gym, Wed 7 Oct'));
+
+    expect(within(rowOf('Gym')).getByText('3 times a week · 3 of 3 this week')).toBeInTheDocument();
+    await waitFor(() => expect(streakOf('Gym')).toBe('Current streak: 3 weeks'));
+    expect(fake.marksOf('h-gym')).toEqual(['2026-10-05', '2026-10-06', '2026-10-07']);
+  });
+
+  it('takes a day back out of the week', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([gym]);
+    renderPage(fake);
+    await screen.findByRole('table');
+
+    await user.click(cell('Gym, Mon 5 Oct'));
+
+    expect(within(rowOf('Gym')).getByText('3 times a week · 1 of 3 this week')).toBeInTheDocument();
+    await waitFor(() => expect(fake.marksOf('h-gym')).toEqual(['2026-10-06']));
+  });
+
+  it('counts a day of the week before into that week, not into this one', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([gym]);
+    renderPage(fake);
+    await screen.findByRole('table');
+
+    await user.click(cell('Gym, Sun 4 Oct'));
+
+    // Sunday 4 October is the last day of the week before: this week's number stays.
+    expect(within(rowOf('Gym')).getByText('3 times a week · 2 of 3 this week')).toBeInTheDocument();
+    await waitFor(() => expect(fake.marksOf('h-gym')).toContain('2026-10-04'));
+  });
+
+  it('explains the open ring in the legend only when there is such a habit', async () => {
+    const withQuota = fakeHabits([gym]);
+    renderPage(withQuota);
+    await screen.findByRole('table');
+
+    expect(screen.getByText('Not done (any day counts)')).toBeInTheDocument();
+  });
+
+  it('has no such legend entry for habits with due days', async () => {
+    renderPage(fakeHabits([stretch]));
+    await screen.findByRole('table');
+
+    expect(screen.queryByText('Not done (any day counts)')).not.toBeInTheDocument();
+  });
+
+  it('shows only the rule in a month that does not hold this week', async () => {
+    const fake = fakeHabits([gym]);
+    renderPage(fake, '/habits?month=2026-08');
+    await screen.findByRole('table');
+
+    expect(within(rowOf('Gym')).getByText('3 times a week')).toBeInTheDocument();
+    expect(within(rowOf('Gym')).queryByText(/this week/)).not.toBeInTheDocument();
+  });
+
+  it('adds a habit that is done a number of times a week', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([stretch]);
+    renderPage(fake);
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: 'New habit' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New habit' });
+
+    await user.type(within(dialog).getByLabelText('What do you want to do?'), 'Swim');
+    await user.selectOptions(within(dialog).getByLabelText('Repeat'), 'timesPerWeek');
+    await user.click(within(dialog).getByRole('button', { name: /^Add habit/ }));
+
+    await waitFor(() => expect(fake.calls.create).toHaveLength(1));
+    expect(fake.calls.create[0]?.recurrence).toEqual({ kind: 'timesPerWeek', times: 3 });
+    // It starts today: the week has none of its three yet.
+    expect(
+      await within(await screen.findByRole('table')).findByText(
+        '3 times a week · 0 of 3 this week',
+      ),
+    ).toBeInTheDocument();
+    expect(cell('Swim, Wed 7 Oct')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('edits the count', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([gym]);
+    renderPage(fake);
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: 'Edit Gym' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit habit' });
+
+    const times = await within(dialog).findByLabelText('How many times a week?');
+    expect(times).toHaveValue(3);
+    await user.clear(times);
+    await user.type(times, '4');
+    await user.click(within(dialog).getByRole('button', { name: /^Save changes/ }));
+
+    await waitFor(() =>
+      expect(fake.calls.update[0]?.input.recurrence).toEqual({ kind: 'timesPerWeek', times: 4 }),
+    );
+    expect(await screen.findByText('4 times a week · 2 of 4 this week')).toBeInTheDocument();
   });
 });

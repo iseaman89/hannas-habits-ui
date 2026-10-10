@@ -40,6 +40,24 @@ const newcomer: FakeHabit = {
   completed: [],
 };
 
+// "3 times a week": no day is due, and the week of 5 - 11 October has two of its three.
+const gym: FakeHabit = {
+  id: 'h-gym',
+  title: 'Gym',
+  recurrence: {
+    kind: 'timesPerWeek',
+    weekdays: [],
+    interval: 1,
+    anchor: null,
+    occurrence: null,
+    weekday: null,
+    dayOfMonth: null,
+    times: 3,
+  },
+  startDate: '2026-09-01',
+  completed: ['2026-09-29', '2026-09-30', '2026-10-02', '2026-10-05', '2026-10-06'],
+};
+
 function renderCard(fake: ReturnType<typeof fakeHabits>, date = '2026-10-07') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -136,6 +154,66 @@ describe('the habits of a day', () => {
 
     expect(await screen.findByText('Nothing is planned for this day.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /0 of 0/ })).toBeInTheDocument();
+  });
+});
+
+describe('a quota habit', () => {
+  it('is on the plan on every day - also a day a weekday rule would leave out', async () => {
+    const fake = fakeHabits([gym, run]);
+    renderCard(fake); // Wednesday: "Run" is for Tuesdays and Thursdays
+
+    await screen.findByRole('checkbox', { name: 'Gym' });
+
+    expect(screen.getAllByRole('checkbox').map((box) => box.getAttribute('aria-label'))).toEqual([
+      'Gym',
+    ]);
+  });
+
+  it('says how far the week has come, under the name', async () => {
+    const fake = fakeHabits([gym]);
+    renderCard(fake);
+
+    const row = (await screen.findByRole('checkbox', { name: 'Gym' })).closest('li')!;
+
+    expect(within(row).getByText('2 of 3 this week')).toBeInTheDocument();
+  });
+
+  it('says "in that week" for the week of another day', async () => {
+    const fake = fakeHabits([gym]);
+    renderCard(fake, '2026-10-02'); // a Friday of the week before
+
+    const row = (await screen.findByRole('checkbox', { name: 'Gym' })).closest('li')!;
+
+    expect(within(row).getByText('3 of 3 in that week')).toBeInTheDocument();
+  });
+
+  it('counts the streak in weeks', async () => {
+    const fake = fakeHabits([gym]);
+    renderCard(fake);
+
+    const row = (await screen.findByRole('checkbox', { name: 'Gym' })).closest('li')!;
+
+    expect(within(row).getByRole('img', { name: 'Current streak: 5 weeks' })).toBeInTheDocument();
+  });
+
+  it('ticks a day and moves the week’s number along', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([gym]);
+    renderCard(fake);
+
+    await user.click(await screen.findByRole('checkbox', { name: 'Gym' }));
+
+    await waitFor(() => expect(fake.calls.marks).toEqual(['mark h-gym 2026-10-07']));
+    expect(await screen.findByText('3 of 3 this week')).toBeInTheDocument();
+  });
+
+  it('keeps a habit with due days free of any week text', async () => {
+    const fake = fakeHabits([stretch]);
+    renderCard(fake);
+
+    const row = (await screen.findByRole('checkbox', { name: 'Stretch' })).closest('li')!;
+
+    expect(within(row).queryByText(/this week|in that/)).not.toBeInTheDocument();
   });
 });
 

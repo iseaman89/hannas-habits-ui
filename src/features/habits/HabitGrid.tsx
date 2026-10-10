@@ -12,6 +12,7 @@ import { scrollLeftToCenter } from './gridScroll';
 import { daysOfMonth } from './months';
 import { StreakBadge } from './StreakBadge';
 import { TagDot } from './TagDot';
+import { isQuota, quotaProgressText, streakUnit } from './quota';
 import { recurrenceLabel, toRecurrenceValues } from './recurrence';
 import { dayName, type DayOfWeek } from './weekdays';
 
@@ -145,7 +146,11 @@ function HabitRow({ habit, days, today, onToggle, onTags, onEdit, onDelete }: Ha
   const tagged = new Map<string, readonly TagSummary[]>(
     habit.taggedDays.map((day) => [day.date, day.tags]),
   );
-  const rule = recurrenceLabel(toRecurrenceValues(habit.recurrence));
+  const quota = isQuota(habit.recurrence);
+  const progress = quotaProgressText(habit, today, today);
+  const rule = [recurrenceLabel(toRecurrenceValues(habit.recurrence)), progress]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <tr className="[&>*]:border-t [&>*]:border-divider">
@@ -179,6 +184,7 @@ function HabitRow({ habit, days, today, onToggle, onTags, onEdit, onDelete }: Ha
           startDate: habit.startDate,
           scheduled: due.has(key),
           done: isDone,
+          quota,
         });
         const label = `${habit.title}, ${format(date, 'EEE d MMM')}`;
         return (
@@ -189,7 +195,7 @@ function HabitRow({ habit, days, today, onToggle, onTags, onEdit, onDelete }: Ha
         );
       })}
       <td className="py-2 pl-4 text-right">
-        <StreakBadge days={habit.currentStreak} />
+        <StreakBadge days={habit.currentStreak} unit={streakUnit(habit.recurrence)} />
       </td>
     </tr>
   );

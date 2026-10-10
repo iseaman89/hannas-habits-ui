@@ -11,17 +11,33 @@ export interface CompletionChange {
   done: boolean;
 }
 
-/** `completedDates` stay oldest first and without duplicates, as the server sends them. */
+/**
+ * `completedDates` stay oldest first and without duplicates, as the server sends them. For a
+ * quota habit the week or month of the day moves its `done` along, so "2 of 3 this week" changes
+ * with the tick; the server's own count replaces it when the screen asks again.
+ */
 export function withCompletion(
   habits: readonly HabitOverview[],
   { habitId, date, done }: CompletionChange,
 ): HabitOverview[] {
   return habits.map((habit) => {
     if (habit.id !== habitId) return habit;
+    const wasDone = habit.completedDates.includes(date);
     const others = habit.completedDates.filter((completed) => completed !== date);
     // `yyyy-MM-dd` sorts the same as the calendar.
     const completedDates = (done ? [...others, date] : others).sort();
-    return { ...habit, completedDates };
+
+    // A day before the start does not count towards a period (the server leaves it out).
+    const change = date < habit.startDate ? 0 : Number(done) - Number(wasDone);
+    const quotaPeriods =
+      change === 0
+        ? habit.quotaPeriods
+        : habit.quotaPeriods.map((period) =>
+            period.from <= date && date <= period.to
+              ? { ...period, done: Math.max(0, period.done + change) }
+              : period,
+          );
+    return { ...habit, completedDates, quotaPeriods };
   });
 }
 

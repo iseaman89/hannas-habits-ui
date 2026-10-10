@@ -223,7 +223,7 @@ describe('HabitForm', () => {
 describe('HabitForm: the repeat rule', () => {
   const named = { ...EMPTY_HABIT, title: 'Stretch' };
 
-  it('offers the four kinds and starts on "days of the week"', () => {
+  it('offers every kind and starts on "days of the week"', () => {
     renderForm({ initial: named });
 
     expect(repeat()).toHaveValue('weekly');
@@ -236,6 +236,8 @@ describe('HabitForm: the repeat rule', () => {
       'Every few days',
       'A weekday of the month',
       'A date of the month',
+      'A number of times a week',
+      'A number of times a month',
     ]);
     expect(screen.getByLabelText('Every how many weeks?')).toHaveValue(1);
     // (the preset button of the same name is not the sentence)
@@ -367,6 +369,70 @@ describe('HabitForm: the repeat rule', () => {
     );
   });
 
+  it('sends a number of times a week, on whichever days, and says so on the button', async () => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderForm({ initial: named });
+
+    await user.selectOptions(repeat(), 'timesPerWeek');
+    const times = screen.getByLabelText('How many times a week?');
+    expect(times).toHaveValue(3); // the default of the form
+    await user.clear(times);
+    await user.type(times, '4');
+
+    expect(screen.getByText(/4 times a week, on whichever days/)).toBeInTheDocument();
+    expect(submitButton()).toHaveAccessibleName('Add habit · 4×/week');
+    // No day is picked and no rhythm counts from a day: those fields are not on screen.
+    expect(screen.queryByLabelText('Counted from')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Monday' })).toBeNull();
+    await user.click(submitButton());
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recurrence: { kind: 'timesPerWeek', times: 4 } }),
+    );
+  });
+
+  it('sends a number of times a month', async () => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderForm({ initial: named });
+
+    await user.selectOptions(repeat(), 'timesPerMonth');
+    const times = screen.getByLabelText('How many times a month?');
+    await user.clear(times);
+    await user.type(times, '8');
+
+    expect(screen.getByText(/8 times a month, on whichever days/)).toBeInTheDocument();
+    expect(submitButton()).toHaveAccessibleName('Add habit · 8×/month');
+    await user.click(submitButton());
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recurrence: { kind: 'timesPerMonth', times: 8 } }),
+    );
+  });
+
+  it('keeps the count while the kind is switched between the week and the month', async () => {
+    const user = userEvent.setup();
+    renderForm({ initial: { ...named, recurrence: rule({ kind: 'timesPerWeek', times: 5 }) } });
+
+    await user.selectOptions(repeat(), 'timesPerMonth');
+    expect(screen.getByLabelText('How many times a month?')).toHaveValue(5);
+    await user.selectOptions(repeat(), 'weekly');
+    await user.selectOptions(repeat(), 'timesPerWeek');
+
+    expect(screen.getByLabelText('How many times a week?')).toHaveValue(5);
+  });
+
+  it('reads the saved count back into the field of an edit', () => {
+    renderForm({
+      initial: { ...named, recurrence: rule({ kind: 'timesPerMonth', times: 12 }) },
+      editing: true,
+    });
+
+    expect(repeat()).toHaveValue('timesPerMonth');
+    expect(screen.getByLabelText('How many times a month?')).toHaveValue(12);
+    // The rule is as it was: no note about the days that have passed.
+    expect(screen.queryByText(/also applies to days that have passed/)).toBeNull();
+  });
+
   it('remembers what was set for a kind while another one is chosen', async () => {
     const user = userEvent.setup();
     renderForm({ initial: { ...named, recurrence: weekly([2, 5]) } });
@@ -407,6 +473,12 @@ describe('HabitForm: the repeat rule', () => {
     ['everyNDays', 'Every how many days?', { everyDays: 1 }, 'Use a whole number from 2 to 365.'],
     ['everyNDays', 'Every how many days?', { everyDays: 366 }, 'Use a whole number from 2 to 365.'],
     ['monthlyOnDate', 'Day of the month', { dayOfMonth: 32 }, 'Use a day from 1 to 31.'],
+    ['timesPerWeek', 'How many times a week?', { times: 0 }, 'Use a whole number from 1 to 7.'],
+    ['timesPerWeek', 'How many times a week?', { times: 8 }, 'Use a whole number from 1 to 7.'],
+    ['timesPerWeek', 'How many times a week?', { times: null }, 'Use a whole number from 1 to 7.'],
+    ['timesPerWeek', 'How many times a week?', { times: 2.5 }, 'Use a whole number from 1 to 7.'],
+    ['timesPerMonth', 'How many times a month?', { times: 0 }, 'Use a whole number from 1 to 28.'],
+    ['timesPerMonth', 'How many times a month?', { times: 29 }, 'Use a whole number from 1 to 28.'],
   ] as const)('does not send %s with %j and says why', async (kind, label, facts, message) => {
     const user = userEvent.setup();
     const { onSubmit } = renderForm({
@@ -434,6 +506,37 @@ describe('HabitForm: the repeat rule', () => {
 
     expect(await screen.findByText(message)).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('does not hold a count of another kind against a rule that has none', async () => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderForm({
+      // 40 is too many for "times a week", but the chosen rule is "last Saturday".
+      initial: {
+        ...named,
+        recurrence: rule({ kind: 'monthlyOnWeekday', times: 40 }),
+      },
+    });
+
+    await user.click(submitButton());
+
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  it('shows the server’s complaint about the count under its field', async () => {
+    const user = userEvent.setup();
+    renderForm({
+      initial: { ...named, recurrence: rule({ kind: 'timesPerWeek', times: 3 }) },
+      onSubmit: () =>
+        Promise.reject(apiError(400, { fieldErrors: { 'recurrence.times': ['Not that often.'] } })),
+    });
+
+    await user.click(submitButton());
+
+    expect(await screen.findByText('Not that often.')).toBeInTheDocument();
+    expect(screen.getByLabelText('How many times a week?')).toHaveAccessibleDescription(
+      /Not that often\./,
+    );
   });
 
   it('shows the server’s one "interval" under the weeks or the days, whichever is chosen', async () => {

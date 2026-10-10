@@ -25,6 +25,7 @@ const stretch: HabitOverview = {
   scheduledDates: dueDays(everyDay, '2026-10-01'),
   completedDates: ['2026-10-05'],
   taggedDays: [],
+  quotaPeriods: [],
   currentStreak: 4,
 };
 
@@ -36,7 +37,39 @@ const read: HabitOverview = {
   scheduledDates: dueDays(monWedFri, '2026-10-01'),
   completedDates: [],
   taggedDays: [],
+  quotaPeriods: [],
   currentStreak: 0,
+};
+
+const gymRule = { ...weeklyRecurrence([]), kind: 'timesPerWeek' as const, times: 3 };
+const callRule = { ...weeklyRecurrence([]), kind: 'timesPerMonth' as const, times: 2 };
+
+/** "3 times a week": every day from the start can be ticked, the week of 5 - 11 October has 2. */
+const gym: HabitOverview = {
+  id: 'h-3',
+  title: 'Gym',
+  recurrence: gymRule,
+  startDate: '2026-10-01',
+  scheduledDates: OCTOBER,
+  completedDates: ['2026-10-05', '2026-10-06'],
+  taggedDays: [],
+  quotaPeriods: [
+    { from: '2026-09-28', to: '2026-10-04', done: 1 },
+    { from: '2026-10-05', to: '2026-10-11', done: 2 },
+    { from: '2026-10-12', to: '2026-10-18', done: 0 },
+    { from: '2026-10-19', to: '2026-10-25', done: 0 },
+    { from: '2026-10-26', to: '2026-11-01', done: 0 },
+  ],
+  currentStreak: 3,
+};
+
+const phone: HabitOverview = {
+  ...gym,
+  id: 'h-4',
+  title: 'Call home',
+  recurrence: callRule,
+  quotaPeriods: [{ from: '2026-10-01', to: '2026-10-31', done: 1 }],
+  currentStreak: 1,
 };
 
 function renderGrid(overrides: Partial<Parameters<typeof HabitGrid>[0]> = {}) {
@@ -270,6 +303,70 @@ describe('HabitGrid', () => {
 
       expect(screen.getByRole('button', { name: 'Tags, Stretch, Mon 5 Oct: sick' })).toBeVisible();
       expect(screen.getByRole('button', { name: 'Tags, Read, Mon 5 Oct: trip' })).toBeVisible();
+    });
+  });
+
+  describe('a quota habit ("3 times a week")', () => {
+    const rowOfGym = () =>
+      screen.getByRole('rowheader', { name: /^Gym/ }).closest('tr') as HTMLElement;
+
+    it('says the rule and how far this week has come, under the name', () => {
+      renderGrid({ habits: [gym] });
+
+      expect(within(rowOfGym()).getByText('3 times a week · 2 of 3 this week')).toBeInTheDocument();
+    });
+
+    it('says how far this month has come for "times a month"', () => {
+      renderGrid({ habits: [phone] });
+
+      expect(screen.getByText('Twice a month · 1 of 2 this month')).toBeInTheDocument();
+    });
+
+    it('leaves the progress out when the answer does not hold the period of today', () => {
+      // A month in the past: the server answered with its weeks, and none of them is today's.
+      const august = { ...gym, quotaPeriods: [{ from: '2026-08-03', to: '2026-08-09', done: 1 }] };
+      renderGrid({ habits: [august], month: new Date(2026, 7, 1), today: '2026-10-07' });
+
+      expect(screen.getByText('3 times a week')).toBeInTheDocument();
+      expect(screen.queryByText(/this week/)).not.toBeInTheDocument();
+    });
+
+    it('lets every past day be ticked, and never calls one missed', async () => {
+      const user = userEvent.setup();
+      const { onToggle } = renderGrid({ habits: [gym] });
+
+      const pastOpen = within(rowOfGym()).getByRole('button', { name: 'Gym, Fri 2 Oct' });
+      expect(pastOpen).toHaveAttribute('aria-pressed', 'false');
+      expect(within(rowOfGym()).queryByRole('img', { name: /missed/ })).not.toBeInTheDocument();
+
+      await user.click(pastOpen);
+
+      expect(onToggle).toHaveBeenCalledWith(gym, '2026-10-02', true);
+    });
+
+    it('draws today as open - not as due - and days to come as upcoming', () => {
+      renderGrid({ habits: [gym] }); // today is Wed 7 October
+
+      expect(within(rowOfGym()).getByRole('button', { name: 'Gym, Wed 7 Oct' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+      expect(
+        within(rowOfGym()).getByRole('img', { name: 'Gym, Thu 8 Oct: upcoming' }),
+      ).toBeInTheDocument();
+    });
+
+    it('shows the streak in weeks, and in months for a monthly count', () => {
+      renderGrid({ habits: [gym, phone] });
+
+      expect(screen.getByRole('img', { name: 'Current streak: 3 weeks' })).toHaveTextContent('3wk');
+      expect(screen.getByRole('img', { name: 'Current streak: 1 month' })).toHaveTextContent('1mo');
+    });
+
+    it('keeps the streak of a habit with due days in days, with no unit written', () => {
+      renderGrid({ habits: [stretch] });
+
+      expect(screen.getByRole('img', { name: 'Current streak: 4' })).toHaveTextContent(/^4$/);
     });
   });
 });

@@ -34,6 +34,7 @@ export function toRecurrenceValues(recurrence: Recurrence): RecurrenceValues {
     occurrence: recurrence.occurrence ?? DEFAULT_RECURRENCE.occurrence,
     weekday: recurrence.weekday ?? DEFAULT_RECURRENCE.weekday,
     dayOfMonth: recurrence.dayOfMonth ?? DEFAULT_RECURRENCE.dayOfMonth,
+    times: recurrence.times ?? DEFAULT_RECURRENCE.times,
   };
 }
 
@@ -68,6 +69,10 @@ export function toRecurrenceRequest(rule: RecurrenceValues): RecurrenceRequest {
       return { kind: 'monthlyOnWeekday', occurrence: rule.occurrence, weekday: rule.weekday };
     case 'monthlyOnDate':
       return { kind: 'monthlyOnDate', dayOfMonth: rule.dayOfMonth ?? 1 };
+    case 'timesPerWeek':
+      return { kind: 'timesPerWeek', times: rule.times ?? 1 };
+    case 'timesPerMonth':
+      return { kind: 'timesPerMonth', times: rule.times ?? 1 };
   }
 }
 
@@ -113,10 +118,17 @@ function daysPhrase(days: readonly DayOfWeek[]): string {
   return listOf(inWeekOrder(days).map((day) => dayName(day).short));
 }
 
+/** "Once", "Twice", "3 times": how often, for "Once a week", "Twice a month", "3 times a week". */
+export function timesPhrase(times: number): string {
+  if (times === 1) return 'Once';
+  if (times === 2) return 'Twice';
+  return `${times} times`;
+}
+
 /**
  * The rule in a few words, for the line under a habit's name: "Every day", "Mon · Wed · Fri",
  * "Every 2nd week on Mon and Thu", "Every 3rd day", "Last Saturday of the month", "On the 15th of
- * the month". "Every week on some days" keeps the wording the grid has always had.
+ * the month", "3 times a week". "Every week on some days" keeps the wording the grid has always had.
  */
 export function recurrenceLabel(rule: RecurrenceValues): string {
   switch (rule.kind) {
@@ -134,6 +146,10 @@ export function recurrenceLabel(rule: RecurrenceValues): string {
       // The 31st is "the last day" of every month: a shorter month uses its own last day.
       return day === 31 ? 'Last day of the month' : `On the ${ordinal(day)} of the month`;
     }
+    case 'timesPerWeek':
+      return `${timesPhrase(rule.times ?? 1)} a week`;
+    case 'timesPerMonth':
+      return `${timesPhrase(rule.times ?? 1)} a month`;
   }
 }
 
@@ -169,5 +185,9 @@ export function recurrenceSummary(rule: RecurrenceValues, startDate: string): st
     }
     case 'monthlyOnWeekday':
       return label;
+    case 'timesPerWeek':
+      return `${label}, on whichever days - the week runs Monday to Sunday`;
+    case 'timesPerMonth':
+      return `${label}, on whichever days - the calendar month counts`;
   }
 }

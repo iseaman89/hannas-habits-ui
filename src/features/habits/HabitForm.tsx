@@ -42,6 +42,7 @@ const FIELDS = [
   'recurrence.occurrence',
   'recurrence.weekday',
   'recurrence.dayOfMonth',
+  'recurrence.times',
 ] as const;
 
 /** One form for adding and for editing a habit (the old UI had two copies of it). */
@@ -69,9 +70,13 @@ export function HabitForm({
   const ruleIsValid = recurrenceSchema.safeParse(rule).success;
   // The design keeps the button off until there is something to save.
   const canSubmit = title.trim() !== '' && !(rule.kind === 'weekly' && rule.weekdays.length === 0);
-  // "3×/week" is only true of a rule that repeats every week.
-  const perWeek =
-    rule.kind === 'weekly' && rule.everyWeeks === 1 ? ` · ${rule.weekdays.length}×/week` : '';
+  // "3×/week" is only true of a rule that repeats every week, or counts a number a week.
+  const perWeek = ((): string => {
+    if (rule.kind === 'weekly' && rule.everyWeeks === 1) return ` · ${rule.weekdays.length}×/week`;
+    if (rule.kind === 'timesPerWeek' && ruleIsValid) return ` · ${rule.times}×/week`;
+    if (rule.kind === 'timesPerMonth' && ruleIsValid) return ` · ${rule.times}×/month`;
+    return '';
+  })();
   const ruleChanged = editing && ruleIsValid && !sameRecurrence(initial.recurrence, rule);
 
   const submit = handleSubmit(async (values) => {
@@ -118,6 +123,7 @@ export function HabitForm({
               occurrence: ruleErrors?.occurrence?.message,
               weekday: ruleErrors?.weekday?.message,
               dayOfMonth: ruleErrors?.dayOfMonth?.message,
+              times: ruleErrors?.times?.message,
             }}
           />
         )}

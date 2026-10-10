@@ -8,6 +8,7 @@ import { cellState, isToggleable, type CellState } from './cells';
 import { useMarkHabit } from './habitMutations';
 import { useHabitOverview } from './habitQueries';
 import { habitsGateway, type HabitOverview, type HabitsGateway } from './habitsGateway';
+import { isQuota, quotaProgressText, streakUnit } from './quota';
 import { StreakBadge } from './StreakBadge';
 
 interface TodayHabitsCardProps {
@@ -48,6 +49,7 @@ export function TodayHabitsCard({ date, gateway = habitsGateway }: TodayHabitsCa
               startDate: habit.startDate,
               scheduled: habit.scheduledDates.includes(date),
               done: habit.completedDates.includes(date),
+              quota: isQuota(habit.recurrence),
             }),
           }))
           .filter(({ state }) => state !== 'before-start' && state !== 'not-scheduled')
@@ -91,10 +93,13 @@ export function TodayHabitsCard({ date, gateway = habitsGateway }: TodayHabitsCa
               disabled={!isToggleable(state)}
               onChange={(done) => mark.mutate({ habitId: habit.id, date, done })}
             />
-            <span aria-hidden className="min-w-0 flex-1 truncate font-semibold">
-              {habit.title}
+            <span className="min-w-0 flex-1">
+              <span aria-hidden className="block truncate font-semibold">
+                {habit.title}
+              </span>
+              <QuotaProgress habit={habit} day={date} today={today} />
             </span>
-            <StreakBadge days={habit.currentStreak} />
+            <StreakBadge days={habit.currentStreak} unit={streakUnit(habit.recurrence)} />
           </li>
         ))}
       </ul>
@@ -126,5 +131,21 @@ export function TodayHabitsCard({ date, gateway = habitsGateway }: TodayHabitsCa
       </div>
       <div className="mt-3">{renderBody()}</div>
     </Card>
+  );
+}
+
+/** "2 of 3 this week" under a quota habit's name; nothing for any other rule. */
+function QuotaProgress({
+  habit,
+  day,
+  today,
+}: {
+  habit: HabitOverview;
+  day: string;
+  today: string;
+}) {
+  const text = quotaProgressText(habit, day, today);
+  return text === null ? null : (
+    <span className="block truncate text-xs text-accent-2-900">{text}</span>
   );
 }

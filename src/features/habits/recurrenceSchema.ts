@@ -10,6 +10,12 @@ export const MAX_WEEK_INTERVAL = 52;
 export const MIN_DAY_INTERVAL = 2;
 export const MAX_DAY_INTERVAL = 365;
 export const MAX_DAY_OF_MONTH = 31;
+/**
+ * "N times a week / month" (a quota, no fixed day). A month's limit is 28 so that every month -
+ * February too - can reach it.
+ */
+export const MAX_TIMES_PER_WEEK = 7;
+export const MAX_TIMES_PER_MONTH = 28;
 /** The earliest and latest day a rhythm may count from (the same range as a start date). */
 export const ANCHOR_MIN = '2000-01-01';
 export const ANCHOR_MAX = '2100-12-31';
@@ -19,6 +25,8 @@ export const SCHEDULE_KINDS = [
   'everyNDays',
   'monthlyOnWeekday',
   'monthlyOnDate',
+  'timesPerWeek',
+  'timesPerMonth',
 ] as const;
 export const OCCURRENCES = ['first', 'second', 'third', 'fourth', 'last'] as const;
 
@@ -61,6 +69,8 @@ export const recurrenceSchema = z
     weekday: dayOfWeek,
     /** Monthly on a date: 1..31 (29..31 fall on the last day of a shorter month). */
     dayOfMonth: z.number().nullable(),
+    /** Times a week (1..7) or times a month (1..28): how often, on whichever days. */
+    times: z.number().nullable(),
   })
   .superRefine((rule, context) => {
     const problem = (path: keyof typeof rule, message: string) =>
@@ -84,6 +94,14 @@ export const recurrenceSchema = z
 
     if (rule.kind === 'monthlyOnDate' && !wholeNumber(rule.dayOfMonth, 1, MAX_DAY_OF_MONTH)) {
       problem('dayOfMonth', `Use a day from 1 to ${MAX_DAY_OF_MONTH}.`);
+    }
+
+    if (rule.kind === 'timesPerWeek' && !wholeNumber(rule.times, 1, MAX_TIMES_PER_WEEK)) {
+      problem('times', `Use a whole number from 1 to ${MAX_TIMES_PER_WEEK}.`);
+    }
+
+    if (rule.kind === 'timesPerMonth' && !wholeNumber(rule.times, 1, MAX_TIMES_PER_MONTH)) {
+      problem('times', `Use a whole number from 1 to ${MAX_TIMES_PER_MONTH}.`);
     }
 
     // An explicit anchor only matters for the rules that count from a day.
@@ -112,4 +130,5 @@ export const DEFAULT_RECURRENCE: RecurrenceValues = {
   occurrence: 'first',
   weekday: 1,
   dayOfMonth: 1,
+  times: 3,
 };

@@ -11,6 +11,8 @@ import {
   ANCHOR_MIN,
   MAX_DAY_INTERVAL,
   MAX_DAY_OF_MONTH,
+  MAX_TIMES_PER_MONTH,
+  MAX_TIMES_PER_WEEK,
   MAX_WEEK_INTERVAL,
   MIN_DAY_INTERVAL,
   OCCURRENCES,
@@ -30,7 +32,8 @@ export type RecurrenceErrors = Partial<
     | 'anchor'
     | 'occurrence'
     | 'weekday'
-    | 'dayOfMonth',
+    | 'dayOfMonth'
+    | 'times',
     string
   >
 >;
@@ -50,6 +53,8 @@ const KIND_LABELS: Record<ScheduleKind, string> = {
   everyNDays: 'Every few days',
   monthlyOnWeekday: 'A weekday of the month',
   monthlyOnDate: 'A date of the month',
+  timesPerWeek: 'A number of times a week',
+  timesPerMonth: 'A number of times a month',
 };
 
 const OCCURRENCE_LABELS: Record<WeekdayOccurrence, string> = {
@@ -226,6 +231,34 @@ export function RecurrencePicker({
                 </option>
               ))}
             </Select>
+          )}
+        </Field>
+      )}
+
+      {(value.kind === 'timesPerWeek' || value.kind === 'timesPerMonth') && (
+        <Field
+          label={
+            value.kind === 'timesPerWeek' ? 'How many times a week?' : 'How many times a month?'
+          }
+          hint={
+            value.kind === 'timesPerWeek'
+              ? 'On whichever days. The week runs Monday to Sunday; the streak counts weeks that reached it.'
+              : 'On whichever days. The calendar month counts; the streak counts months that reached it.'
+          }
+          error={errors.times}
+        >
+          {(control) => (
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={value.kind === 'timesPerWeek' ? MAX_TIMES_PER_WEEK : MAX_TIMES_PER_MONTH}
+              step={1}
+              className="w-32"
+              {...control}
+              value={value.times ?? ''}
+              onChange={(event) => set({ times: toNumber(event.target.value) })}
+            />
           )}
         </Field>
       )}

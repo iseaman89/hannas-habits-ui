@@ -7,9 +7,11 @@ import { toApiDate } from '@/shared/lib/dates';
  * - `not-scheduled`: the habit's rule does not make this day due. A record on such a day is kept
  *   by the server but not shown and not counted (the rule has no history, DESIGN.md §9).
  * - `done`, `missed` (scheduled, past, open), `due-today`, `upcoming` (scheduled, in the future).
+ * - `open`: a day of a quota habit ("3 times a week") that is not ticked - past or today. No day
+ *   is *due*, so it is never "missed"; it can be ticked, and it counts when it is.
  */
 export type CellState =
-  'before-start' | 'not-scheduled' | 'done' | 'missed' | 'due-today' | 'upcoming';
+  'before-start' | 'not-scheduled' | 'done' | 'missed' | 'due-today' | 'upcoming' | 'open';
 
 interface CellInput {
   /** The day of the cell (local). */
@@ -26,19 +28,32 @@ interface CellInput {
   scheduled: boolean;
   /** The server has a record for this day. */
   done: boolean;
+  /**
+   * The habit is a quota (`times a week / month`): no day is due, so `scheduled` does not matter
+   * and an unticked day is `open`, not `missed`.
+   */
+  quota?: boolean;
 }
 
 /**
  * The state of a cell. All dates are compared as `yyyy-MM-dd` strings: that spelling sorts the
  * same as the calendar, and it is what the server sends, so no time zone can shift a day.
  */
-export function cellState({ date, today, startDate, scheduled, done }: CellInput): CellState {
+export function cellState({
+  date,
+  today,
+  startDate,
+  scheduled,
+  done,
+  quota = false,
+}: CellInput): CellState {
   const day = toApiDate(date);
   if (day < startDate) return 'before-start';
-  if (!scheduled) return 'not-scheduled';
+  if (!scheduled && !quota) return 'not-scheduled';
   // A record in the future (made elsewhere) is shown as done so it can be taken back.
   if (done) return 'done';
   if (day > today) return 'upcoming';
+  if (quota) return 'open';
   return day === today ? 'due-today' : 'missed';
 }
 
@@ -47,5 +62,5 @@ export function cellState({ date, today, startDate, scheduled, done }: CellInput
  * would accept marks on future or unscheduled days, so this is the one place that blocks them.
  */
 export function isToggleable(state: CellState): boolean {
-  return state === 'done' || state === 'missed' || state === 'due-today';
+  return state === 'done' || state === 'missed' || state === 'due-today' || state === 'open';
 }

@@ -6,13 +6,17 @@ const TODAY = '2026-10-07';
 const START = '2026-10-05';
 
 // Every test says itself whether the server counts the day as due (`scheduledDates`).
-function state(day: number, options: { scheduled?: boolean; done?: boolean } = {}): CellState {
+function state(
+  day: number,
+  options: { scheduled?: boolean; done?: boolean; quota?: boolean } = {},
+): CellState {
   return cellState({
     date: new Date(2026, 9, day),
     today: TODAY,
     startDate: START,
     scheduled: options.scheduled ?? true,
     done: options.done ?? false,
+    quota: options.quota,
   });
 }
 
@@ -62,6 +66,33 @@ describe('cellState', () => {
     expect(state(9, { done: true })).toBe('done');
   });
 
+  describe('a quota habit ("3 times a week")', () => {
+    it('has no missed day: a past day that is not ticked is open', () => {
+      expect(state(6, { quota: true })).toBe('open');
+      expect(state(5, { quota: true })).toBe('open');
+    });
+
+    it('has no day that is due today either: today is open', () => {
+      expect(state(7, { quota: true })).toBe('open');
+    });
+
+    it('shows a ticked day as done, and a day to come as upcoming', () => {
+      expect(state(6, { quota: true, done: true })).toBe('done');
+      expect(state(7, { quota: true, done: true })).toBe('done');
+      expect(state(8, { quota: true })).toBe('upcoming');
+      expect(state(9, { quota: true, done: true })).toBe('done'); // made elsewhere: can be taken back
+    });
+
+    it('still has no days before the start', () => {
+      expect(state(4, { quota: true })).toBe('before-start');
+      expect(state(4, { quota: true, done: true })).toBe('before-start');
+    });
+
+    it('does not depend on the server listing the day', () => {
+      expect(state(6, { quota: true, scheduled: false })).toBe('open');
+    });
+  });
+
   it('goes by the local calendar day, not by the time of day', () => {
     // 00:30 on the first and 23:30 on the last day of the month are still those days.
     const early = cellState({
@@ -88,6 +119,7 @@ describe('isToggleable', () => {
     ['done', true],
     ['missed', true],
     ['due-today', true],
+    ['open', true],
     ['upcoming', false],
     ['not-scheduled', false],
     ['before-start', false],

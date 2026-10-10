@@ -8,7 +8,13 @@ import type {
 } from '@/features/habits/habitsGateway';
 import type { DayOfWeek } from '@/features/habits/weekdays';
 import { eachDayOfInterval, format, parseISO } from 'date-fns';
-import { isDue, recurrenceOf, weeklyRecurrence, type Recurrence } from './recurrence';
+import {
+  isDue,
+  quotaPeriodsOf,
+  recurrenceOf,
+  weeklyRecurrence,
+  type Recurrence,
+} from './recurrence';
 import { createTagBook, type TagBook } from './tagBook';
 
 export interface FakeHabit {
@@ -131,6 +137,13 @@ export function fakeHabits(
           .filter((day) => day >= query.from && day <= query.to)
           .sort(),
         taggedDays: tagBook.taggedDays(habit.id, query.from, query.to),
+        quotaPeriods: quotaPeriodsOf(
+          habit.recurrence,
+          habit.startDate,
+          habit.completed,
+          query.from,
+          query.to,
+        ),
         currentStreak: habit.completed.size,
       }));
     },

@@ -25,6 +25,7 @@ import { DayTagsDialog } from './DayTagsDialog';
 import { DeleteHabitDialog } from './DeleteHabitDialog';
 import { EditHabitDialog } from './EditHabitDialog';
 import { GridLegend } from './GridLegend';
+import { isQuota } from './quota';
 import { HabitGrid } from './HabitGrid';
 import { useMarkHabit } from './habitMutations';
 import { useHabitOverview } from './habitQueries';
@@ -133,7 +134,7 @@ export function HabitsPage({
             setDialog({ kind: 'delete', habit: { id: habit.id, title: habit.title } })
           }
         />
-        <GridLegend />
+        <GridLegend quota={habits.some((habit) => isQuota(habit.recurrence))} />
       </div>
     );
   }

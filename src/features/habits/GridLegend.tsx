@@ -8,8 +8,11 @@ const ITEMS: readonly { state: CellState; label: string }[] = [
   { state: 'not-scheduled', label: 'Not scheduled' },
 ];
 
-/** What the cell pictures mean. */
-export function GridLegend() {
+/**
+ * What the cell pictures mean. `quota`: some habit is "N times a week / month", whose open days
+ * are not missed ones.
+ */
+export function GridLegend({ quota = false }: { quota?: boolean }) {
   return (
     <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-neutral-700">
       {ITEMS.map(({ state, label }) => (
@@ -18,6 +21,12 @@ export function GridLegend() {
           {label}
         </li>
       ))}
+      {quota && (
+        <li className="flex items-center gap-2">
+          <CellFace state="open" />
+          Not done (any day counts)
+        </li>
+      )}
       <li className="flex items-center gap-2">
         <span aria-hidden className="grid size-5 place-items-center">
           <span className="block size-2 rounded-full bg-accent" />
