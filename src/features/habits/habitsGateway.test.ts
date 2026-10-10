@@ -70,17 +70,18 @@ describe('habits gateway', () => {
     expect(requests[0]).toMatchObject({ method: 'post', url: '/habits', body: input });
   });
 
-  it('updates the whole habit and sends no start date', async () => {
+  it('updates the whole habit, start date included', async () => {
     const { gateway, requests } = gatewayFor({ status: 204 });
+    const input = {
+      title: 'Stretch',
+      description: 'Morning',
+      schedule: [2 as const, 4 as const],
+      startDate: '2026-09-01',
+    };
 
-    await gateway.update('h-1', { title: 'Stretch', description: 'Morning', schedule: [2, 4] });
+    await gateway.update('h-1', input);
 
-    expect(requests[0]).toMatchObject({
-      method: 'put',
-      url: '/habits/h-1',
-      body: { title: 'Stretch', description: 'Morning', schedule: [2, 4] },
-    });
-    expect(requests[0]?.body).not.toHaveProperty('startDate');
+    expect(requests[0]).toMatchObject({ method: 'put', url: '/habits/h-1', body: input });
   });
 
   it('deletes a habit', async () => {

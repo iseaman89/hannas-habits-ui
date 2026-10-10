@@ -3,7 +3,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { applyServerError } from '@/shared/lib/formErrors';
 import { Button, Field, FormMessage, Input, Textarea } from '@/shared/ui';
-import { habitSchema, toHabitInput, type HabitValues } from './habitSchema';
+import {
+  START_DATE_MAX,
+  START_DATE_MIN,
+  habitSchema,
+  toHabitInput,
+  type HabitValues,
+} from './habitSchema';
 import type { HabitInput } from './habitsGateway';
 import { WeekdayToggle } from './WeekdayToggle';
 
@@ -17,7 +23,7 @@ interface HabitFormProps {
   onCancel: () => void;
 }
 
-const FIELDS = ['title', 'description', 'schedule'] as const;
+const FIELDS = ['title', 'description', 'schedule', 'startDate'] as const;
 
 /** One form for adding and for editing a habit (the old UI had two copies of it). */
 export function HabitForm({ initial, submitLabel, onSubmit, onCancel }: HabitFormProps) {
@@ -64,6 +70,22 @@ export function HabitForm({ initial, submitLabel, onSubmit, onCancel }: HabitFor
           />
         )}
       />
+
+      <Field
+        label="Starts on"
+        hint="Pick an earlier day to fill in what you already did."
+        error={errors.startDate?.message}
+      >
+        {(control) => (
+          <Input
+            type="date"
+            min={START_DATE_MIN}
+            max={START_DATE_MAX}
+            {...control}
+            {...register('startDate')}
+          />
+        )}
+      </Field>
 
       <Field label="Note (optional)" error={errors.description?.message}>
         {(control) => <Textarea rows={3} {...control} {...register('description')} />}

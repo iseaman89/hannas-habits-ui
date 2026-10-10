@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseApiDate } from '@/shared/lib/dates';
 import type { HabitDetails, HabitInput } from './habitsGateway';
 import { EVERY_DAY } from './weekdays';
 
@@ -9,6 +10,9 @@ import { EVERY_DAY } from './weekdays';
  */
 export const TITLE_MAX_LENGTH = 150;
 export const DESCRIPTION_MAX_LENGTH = 500;
+/** `Habit.MinStartDate` / `MaxStartDate` of the backend. `yyyy-MM-dd` sorts like the calendar. */
+export const START_DATE_MIN = '2000-01-01';
+export const START_DATE_MAX = '2100-12-31';
 
 const dayOfWeek = z.union([
   z.literal(0),
@@ -33,17 +37,31 @@ export const habitSchema = z.object({
     .max(DESCRIPTION_MAX_LENGTH, `Use at most ${DESCRIPTION_MAX_LENGTH} characters.`),
   // Named like the API's field, so a server complaint (`errors.schedule`) finds it by itself.
   schedule: z.array(dayOfWeek).min(1, 'Pick at least one day.'),
+  /** `yyyy-MM-dd`, the first day the habit counts. An earlier one lets earlier days be filled in. */
+  startDate: z
+    .string()
+    .refine((value) => parseApiDate(value) !== null, 'Pick a date.')
+    .refine(
+      (value) => value >= START_DATE_MIN && value <= START_DATE_MAX,
+      'Use a date between 2000 and 2100.',
+    ),
 });
 export type HabitValues = z.infer<typeof habitSchema>;
 
-/** A new habit starts as an every-day habit, like the server's default. */
-export const EMPTY_HABIT: HabitValues = { title: '', description: '', schedule: [...EVERY_DAY] };
+/**
+ * A new habit starts as an every-day habit, like the server's default, and counts from `today`
+ * (the client's local day, `yyyy-MM-dd`: the server's own date could be a day off).
+ */
+export function emptyHabit(today: string): HabitValues {
+  return { title: '', description: '', schedule: [...EVERY_DAY], startDate: today };
+}
 
 export function toHabitValues(habit: HabitDetails): HabitValues {
   return {
     title: habit.title,
     description: habit.description ?? '',
     schedule: [...habit.schedule],
+    startDate: habit.startDate,
   };
 }
 
@@ -53,5 +71,6 @@ export function toHabitInput(values: HabitValues): HabitInput {
     title: values.title,
     description: values.description === '' ? null : values.description,
     schedule: values.schedule,
+    startDate: values.startDate,
   };
 }

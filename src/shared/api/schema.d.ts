@@ -1589,6 +1589,8 @@ export interface components {
             title?: string;
             description?: string | null;
             schedule?: components["schemas"]["DayOfWeek"][];
+            /** Format: date */
+            startDate?: string | null;
         };
         UpdateResolutionRequest: {
             title?: string;

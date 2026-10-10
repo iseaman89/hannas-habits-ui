@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -479,11 +479,38 @@ describe('editing a habit', () => {
           title: 'Stretch more',
           description: 'Ten minutes, every morning',
           schedule: [1, 2, 3, 4, 5, 6],
+          startDate: '2026-10-01',
         },
       },
     ]);
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByRole('status')).toHaveTextContent('Habit saved');
+  });
+
+  it('lets an earlier start date make earlier days tickable', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([stretch]);
+    renderPage(fake, '/habits?month=2026-09');
+    const before = await screen.findByRole('img', {
+      name: 'Stretch, Sun 20 Sep: before the habit started',
+    });
+    expect(before).toBeInTheDocument();
+    const dialog = await openEdit(user, 'Stretch');
+
+    expect(await within(dialog).findByLabelText('Starts on')).toHaveValue('2026-10-01');
+    fireEvent.change(within(dialog).getByLabelText('Starts on'), {
+      target: { value: '2026-09-20' },
+    });
+    await user.click(within(dialog).getByRole('button', { name: /^Save changes/ }));
+
+    await waitFor(() => expect(fake.calls.update[0]?.input.startDate).toBe('2026-09-20'));
+    await user.click(await screen.findByRole('button', { name: 'Stretch, Sun 20 Sep' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Stretch, Sun 20 Sep' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      ),
+    );
   });
 
   it('sends a cleared note as "no note"', async () => {
@@ -512,6 +539,7 @@ describe('editing a habit', () => {
       title: 'Stretch and breathe',
       description: null,
       schedule: [1],
+      startDate: '2026-10-01',
     });
     const second = await openEdit(user, 'Stretch');
 

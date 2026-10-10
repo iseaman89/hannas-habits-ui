@@ -1,10 +1,13 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { apiError } from '@/test/problems';
-import { EMPTY_HABIT, type HabitValues } from './habitSchema';
+import { emptyHabit, type HabitValues } from './habitSchema';
 import type { HabitInput } from './habitsGateway';
 import { HabitForm } from './HabitForm';
+
+// The client's "today" in these tests.
+const EMPTY_HABIT = emptyHabit('2026-10-07');
 
 function renderForm(
   options: { initial?: HabitValues; onSubmit?: (input: HabitInput) => Promise<unknown> } = {},
@@ -24,6 +27,7 @@ function renderForm(
 
 const title = () => screen.getByLabelText('What do you want to do?');
 const day = (name: string) => screen.getByRole('button', { name });
+const startDate = () => screen.getByLabelText('Starts on');
 const submitButton = () => screen.getByRole('button', { name: /^Add habit/ });
 
 describe('HabitForm', () => {
@@ -103,7 +107,35 @@ describe('HabitForm', () => {
       title: 'Stretch for 10 minutes',
       description: null,
       schedule: [1, 2, 3, 4, 5],
+      startDate: '2026-10-07',
     });
+  });
+
+  it('starts on the given day and sends an earlier one when it is changed', async () => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderForm({ initial: { ...EMPTY_HABIT, title: 'Stretch' } });
+    expect(startDate()).toHaveValue('2026-10-07');
+
+    fireEvent.change(startDate(), { target: { value: '2026-08-15' } });
+    await user.click(submitButton());
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ startDate: '2026-08-15' }));
+  });
+
+  it.each([
+    ['', 'Pick a date.'],
+    ['1999-12-31', 'Use a date between 2000 and 2100.'],
+  ])('does not send the start date "%s" and says why', async (value, message) => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderForm({
+      initial: { ...EMPTY_HABIT, title: 'Stretch', startDate: value },
+    });
+
+    await user.click(submitButton());
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(startDate()).toHaveAttribute('aria-invalid', 'true');
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it('sends a note as typed (trimmed)', async () => {

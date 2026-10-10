@@ -18,11 +18,15 @@ export interface OverviewQuery {
   asOf: string;
 }
 
-/** What a person fills in. Leaving `description` out would clear it, so blank is an explicit `null`. */
+/**
+ * What a person fills in. Leaving `description` out would clear it, so blank is an explicit
+ * `null`. `startDate` (`yyyy-MM-dd`) is the first day the habit counts, in the client's local time.
+ */
 export interface HabitInput {
   title: string;
   description: string | null;
   schedule: DayOfWeek[];
+  startDate: string;
 }
 
 /** The calls the habits screen makes. Dates are `yyyy-MM-dd`. */
@@ -32,9 +36,8 @@ export interface HabitsGateway {
   overview: (query: OverviewQuery, signal?: AbortSignal) => Promise<HabitOverview[]>;
   /** One habit with the fields the overview leaves out (the description). */
   details: (id: string, signal?: AbortSignal) => Promise<HabitDetails>;
-  /** `startDate` is the client's local today: the first day the habit counts. */
-  create: (input: HabitInput & { startDate: string }) => Promise<CreatedHabit>;
-  /** The whole habit; the start date cannot be changed. */
+  create: (input: HabitInput) => Promise<CreatedHabit>;
+  /** The whole habit, including the start date (earlier marks stay, wherever it is moved). */
   update: (id: string, input: HabitInput) => Promise<void>;
   remove: (id: string) => Promise<void>;
   /** Marks the day as done. Idempotent on the server. */

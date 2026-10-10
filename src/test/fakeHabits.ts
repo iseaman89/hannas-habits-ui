@@ -42,7 +42,7 @@ export function fakeHabits(initial: FakeHabit[] = []) {
     list: 0,
     overview: [] as OverviewQuery[],
     details: [] as string[],
-    create: [] as (HabitInput & { startDate: string })[],
+    create: [] as HabitInput[],
     update: [] as { id: string; input: HabitInput }[],
     remove: [] as string[],
     /** `mark h-1 2026-10-07` / `unmark h-1 2026-10-07`, in the order the server saw them. */
