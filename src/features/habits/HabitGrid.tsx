@@ -4,12 +4,14 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { toApiDate } from '@/shared/lib/dates';
 import { IconButton } from '@/shared/ui';
+import type { TagSummary } from '@/features/tags';
 import { cellState } from './cells';
 import { DayCell } from './DayCell';
 import type { HabitOverview } from './habitsGateway';
 import { scrollLeftToCenter } from './gridScroll';
 import { daysOfMonth } from './months';
 import { StreakBadge } from './StreakBadge';
+import { TagDot } from './TagDot';
 import { recurrenceLabel, toRecurrenceValues } from './recurrence';
 import { dayName, type DayOfWeek } from './weekdays';
 
@@ -21,6 +23,8 @@ interface HabitGridProps {
   today: string;
   /** `done` is what the cell should become. */
   onToggle: (habit: HabitOverview, date: string, done: boolean) => void;
+  /** Opens the tags of one day (any day, also one that cannot be ticked). */
+  onTags: (habit: HabitOverview, date: string) => void;
   onEdit: (habit: HabitOverview) => void;
   onDelete: (habit: HabitOverview) => void;
 }
@@ -34,7 +38,15 @@ const stickyCell = 'sticky left-0 z-10 bg-surface';
  * opens scrolled to today (to its start when today is not in it), so that on a phone - where only
  * a few days fit beside the names - the day that matters is the one in view.
  */
-export function HabitGrid({ habits, month, today, onToggle, onEdit, onDelete }: HabitGridProps) {
+export function HabitGrid({
+  habits,
+  month,
+  today,
+  onToggle,
+  onTags,
+  onEdit,
+  onDelete,
+}: HabitGridProps) {
   const days = daysOfMonth(month);
   const scroller = useRef<HTMLDivElement>(null);
   const monthKey = toApiDate(days[0] ?? month);
@@ -108,6 +120,7 @@ export function HabitGrid({ habits, month, today, onToggle, onEdit, onDelete }: 
               days={days}
               today={today}
               onToggle={onToggle}
+              onTags={onTags}
               onEdit={onEdit}
               onDelete={onDelete}
             />
@@ -118,14 +131,20 @@ export function HabitGrid({ habits, month, today, onToggle, onEdit, onDelete }: 
   );
 }
 
-interface HabitRowProps extends Pick<HabitGridProps, 'today' | 'onToggle' | 'onEdit' | 'onDelete'> {
+interface HabitRowProps extends Pick<
+  HabitGridProps,
+  'today' | 'onToggle' | 'onTags' | 'onEdit' | 'onDelete'
+> {
   habit: HabitOverview;
   days: readonly Date[];
 }
 
-function HabitRow({ habit, days, today, onToggle, onEdit, onDelete }: HabitRowProps) {
+function HabitRow({ habit, days, today, onToggle, onTags, onEdit, onDelete }: HabitRowProps) {
   const done = new Set(habit.completedDates);
   const due = new Set(habit.scheduledDates);
+  const tagged = new Map<string, readonly TagSummary[]>(
+    habit.taggedDays.map((day) => [day.date, day.tags]),
+  );
   const rule = recurrenceLabel(toRecurrenceValues(habit.recurrence));
 
   return (
@@ -161,13 +180,11 @@ function HabitRow({ habit, days, today, onToggle, onEdit, onDelete }: HabitRowPr
           scheduled: due.has(key),
           done: isDone,
         });
+        const label = `${habit.title}, ${format(date, 'EEE d MMM')}`;
         return (
-          <td key={key} className="px-0.5 py-2 text-center">
-            <DayCell
-              state={state}
-              label={`${habit.title}, ${format(date, 'EEE d MMM')}`}
-              onToggle={() => onToggle(habit, key, !isDone)}
-            />
+          <td key={key} className="group/day relative px-0.5 py-2 text-center">
+            <DayCell state={state} label={label} onToggle={() => onToggle(habit, key, !isDone)} />
+            <TagDot label={label} tags={tagged.get(key) ?? []} onOpen={() => onTags(habit, key)} />
           </td>
         );
       })}

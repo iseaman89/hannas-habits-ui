@@ -1,7 +1,13 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { addMonths, format, isSameMonth, startOfMonth, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Tags } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
+import {
+  ManageTagsDialog,
+  tagsGateway as defaultTagsGateway,
+  type TagsGateway,
+} from '@/features/tags';
 import { errorMessage } from '@/shared/api';
 import { toApiDate } from '@/shared/lib/dates';
 import { useToday } from '@/shared/lib/useToday';
@@ -15,6 +21,7 @@ import {
   SkeletonGroup,
 } from '@/shared/ui';
 import { CreateHabitDialog } from './CreateHabitDialog';
+import { DayTagsDialog } from './DayTagsDialog';
 import { DeleteHabitDialog } from './DeleteHabitDialog';
 import { EditHabitDialog } from './EditHabitDialog';
 import { GridLegend } from './GridLegend';
@@ -23,11 +30,14 @@ import { useMarkHabit } from './habitMutations';
 import { useHabitOverview } from './habitQueries';
 import { habitsGateway, type HabitsGateway } from './habitsGateway';
 import { monthRange, parseMonthParam, toMonthParam } from './months';
+import { habitKeys } from './habitQueries';
 
 type DialogState =
   | { kind: 'none' }
   | { kind: 'create' }
   | { kind: 'edit'; habitId: string }
+  | { kind: 'tags'; habitId: string; date: string }
+  | { kind: 'manage-tags' }
   | { kind: 'delete'; habit: { id: string; title: string } };
 
 /**
@@ -35,7 +45,14 @@ type DialogState =
  * at once and is sent in the background. The month is part of the address (`?month=2026-09`), so
  * a reload and the back button stay where the person was.
  */
-export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGateway }) {
+export function HabitsPage({
+  gateway = habitsGateway,
+  tagsGateway = defaultTagsGateway,
+}: {
+  gateway?: HabitsGateway;
+  tagsGateway?: TagsGateway;
+}) {
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [dialog, setDialog] = useState<DialogState>({ kind: 'none' });
 
@@ -52,6 +69,21 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
   }
 
   const closeDialog = () => setDialog({ kind: 'none' });
+
+  // The day being tagged is read from the overview on every render, so a tag that was just put
+  // on it (optimistically) shows in the dialog at once; a habit that is gone closes it.
+  const taggedHabit =
+    dialog.kind === 'tags'
+      ? overview.data?.find((habit) => habit.id === dialog.habitId)
+      : undefined;
+  const tagsTarget =
+    dialog.kind === 'tags' && taggedHabit
+      ? {
+          habit: { id: taggedHabit.id, title: taggedHabit.title },
+          date: dialog.date,
+          tags: taggedHabit.taggedDays.find((day) => day.date === dialog.date)?.tags ?? [],
+        }
+      : null;
 
   /** What the card shows. Data that is there wins: a refresh that fails must not wipe the grid. */
   function renderBody() {
@@ -95,6 +127,7 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
           month={month}
           today={today}
           onToggle={(habit, date, done) => mark.mutate({ habitId: habit.id, date, done })}
+          onTags={(habit, date) => setDialog({ kind: 'tags', habitId: habit.id, date })}
           onEdit={(habit) => setDialog({ kind: 'edit', habitId: habit.id })}
           onDelete={(habit) =>
             setDialog({ kind: 'delete', habit: { id: habit.id, title: habit.title } })
@@ -132,6 +165,13 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
             >
               <ChevronRight />
             </IconButton>
+            <IconButton
+              label="Manage tags"
+              variant="secondary"
+              onClick={() => setDialog({ kind: 'manage-tags' })}
+            >
+              <Tags />
+            </IconButton>
             {/* On a phone just the plus: the header has room for little else beside the title. */}
             <Button
               className="max-sm:size-9 max-sm:px-0"
@@ -156,6 +196,19 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
         gateway={gateway}
         habit={dialog.kind === 'delete' ? dialog.habit : null}
         onClose={closeDialog}
+      />
+      <DayTagsDialog
+        gateway={gateway}
+        tagsGateway={tagsGateway}
+        target={tagsTarget}
+        onClose={closeDialog}
+      />
+      <ManageTagsDialog
+        gateway={tagsGateway}
+        open={dialog.kind === 'manage-tags'}
+        onClose={closeDialog}
+        // Renaming, merging and deleting change what days carry: the grid asks again.
+        onTagsChanged={() => void queryClient.invalidateQueries({ queryKey: habitKeys.overviews })}
       />
     </>
   );
