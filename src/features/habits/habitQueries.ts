@@ -13,6 +13,8 @@ export const habitKeys = {
   overview: (query: OverviewQuery) => ['habits', 'overview', query] as const,
   details: (id: string) => ['habits', 'details', id] as const,
   marks: ['habits', 'marks'] as const,
+  /** Tags put on / taken off a day: written one after the other, like the marks. */
+  dayTags: ['habits', 'day-tags'] as const,
 };
 
 /** The plain list of habits, to choose one (the resolutions screen links a resolution to a habit). */

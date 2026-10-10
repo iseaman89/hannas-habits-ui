@@ -138,6 +138,30 @@ describe('habits gateway', () => {
     await expect(gateway.unmark('h-1', '2026-10-07')).rejects.toMatchObject({ status: 500 });
   });
 
+  it('puts a tag on a day with PUT on the day’s own address and returns the day', async () => {
+    const day = { date: '2026-10-07', tags: [{ id: 't-1', name: 'krank' }] };
+    const { gateway, requests } = gatewayFor({ status: 200, data: day });
+
+    await expect(gateway.tagDay('h-1', '2026-10-07', 't-1')).resolves.toEqual(day);
+
+    expect(requests[0]).toMatchObject({
+      method: 'put',
+      url: '/habits/h-1/days/2026-10-07/tags/t-1',
+    });
+  });
+
+  it('takes a tag off a day with DELETE and returns the day', async () => {
+    const day = { date: '2026-10-07', tags: [] };
+    const { gateway, requests } = gatewayFor({ status: 200, data: day });
+
+    await expect(gateway.untagDay('h-1', '2026-10-07', 't-1')).resolves.toEqual(day);
+
+    expect(requests[0]).toMatchObject({
+      method: 'delete',
+      url: '/habits/h-1/days/2026-10-07/tags/t-1',
+    });
+  });
+
   it('reports a 404 of any other call', async () => {
     const { gateway } = gatewayFor({ status: 404, data: { title: 'Not found' } });
 

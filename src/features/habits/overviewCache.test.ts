@@ -3,7 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { habitKeys } from './habitQueries';
 import { weeklyRecurrence } from '@/test/recurrence';
 import type { HabitOverview, OverviewQuery } from './habitsGateway';
-import { applyCompletion, withCompletion } from './overviewCache';
+import {
+  applyCompletion,
+  applyDayTags,
+  applyTagChange,
+  withCompletion,
+  withDayTags,
+  withTagChange,
+} from './overviewCache';
 
 function habit(id: string, completedDates: string[], currentStreak = 0): HabitOverview {
   return {
@@ -110,5 +117,148 @@ describe('applyCompletion', () => {
     applyCompletion(queryClient, { habitId: 'a', date: '2026-10-05', done: true });
 
     expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
+  });
+});
+
+describe('tags on days', () => {
+  const sick = { id: 't-sick', name: 'sick' };
+  const trip = { id: 't-trip', name: 'trip' };
+  const withDays = (id: string, taggedDays: HabitOverview['taggedDays']): HabitOverview => ({
+    ...habit(id, []),
+    taggedDays,
+  });
+
+  describe('withTagChange', () => {
+    it('puts a tag on a day that had none, keeping the days oldest first', () => {
+      const habits = [withDays('a', [{ date: '2026-10-09', tags: [trip] }])];
+
+      const [changed] = withTagChange(habits, {
+        habitId: 'a',
+        date: '2026-10-05',
+        tag: sick,
+        present: true,
+      });
+
+      expect(changed?.taggedDays).toEqual([
+        { date: '2026-10-05', tags: [sick] },
+        { date: '2026-10-09', tags: [trip] },
+      ]);
+    });
+
+    it('adds to the tags a day has, by name', () => {
+      const habits = [withDays('a', [{ date: '2026-10-05', tags: [trip] }])];
+
+      const [changed] = withTagChange(habits, {
+        habitId: 'a',
+        date: '2026-10-05',
+        tag: sick,
+        present: true,
+      });
+
+      expect(changed?.taggedDays).toEqual([{ date: '2026-10-05', tags: [sick, trip] }]);
+    });
+
+    it('takes a tag off, and the day goes when its last tag does', () => {
+      const habits = [
+        withDays('a', [
+          { date: '2026-10-05', tags: [sick, trip] },
+          { date: '2026-10-06', tags: [sick] },
+        ]),
+      ];
+
+      const [partly] = withTagChange(habits, {
+        habitId: 'a',
+        date: '2026-10-05',
+        tag: sick,
+        present: false,
+      });
+      const [gone] = withTagChange(habits, {
+        habitId: 'a',
+        date: '2026-10-06',
+        tag: sick,
+        present: false,
+      });
+
+      expect(partly?.taggedDays[0]).toEqual({ date: '2026-10-05', tags: [trip] });
+      expect(gone?.taggedDays).toEqual([{ date: '2026-10-05', tags: [sick, trip] }]);
+    });
+
+    it('is the same twice: a tag is on a day once, and taking off what is not there is nothing', () => {
+      const habits = [withDays('a', [{ date: '2026-10-05', tags: [sick] }])];
+      const put = { habitId: 'a', date: '2026-10-05', tag: sick, present: true };
+
+      expect(withTagChange(habits, put)).toEqual(habits);
+      expect(
+        withTagChange(habits, { ...put, date: '2026-10-07', tag: trip, present: false }),
+      ).toEqual(habits);
+    });
+
+    it('leaves the other habits alone', () => {
+      const habits = [withDays('a', []), withDays('b', [])];
+
+      const [a, b] = withTagChange(habits, {
+        habitId: 'a',
+        date: '2026-10-05',
+        tag: sick,
+        present: true,
+      });
+
+      expect(a?.taggedDays).toHaveLength(1);
+      expect(b).toBe(habits[1]);
+    });
+  });
+
+  describe('withDayTags', () => {
+    it('replaces what the day carried with what the server says', () => {
+      const habits = [withDays('a', [{ date: '2026-10-05', tags: [sick] }])];
+
+      const [changed] = withDayTags(habits, { habitId: 'a', date: '2026-10-05', tags: [trip] });
+
+      expect(changed?.taggedDays).toEqual([{ date: '2026-10-05', tags: [trip] }]);
+    });
+
+    it('drops the day for an empty answer', () => {
+      const habits = [withDays('a', [{ date: '2026-10-05', tags: [sick] }])];
+
+      const [changed] = withDayTags(habits, { habitId: 'a', date: '2026-10-05', tags: [] });
+
+      expect(changed?.taggedDays).toEqual([]);
+    });
+  });
+
+  describe('in the query cache', () => {
+    function cacheWith(...ranges: OverviewQuery[]) {
+      const queryClient = new QueryClient();
+      for (const range of ranges) {
+        queryClient.setQueryData(habitKeys.overview(range), [withDays('a', [])]);
+      }
+      return queryClient;
+    }
+    const october: OverviewQuery = { from: '2026-10-01', to: '2026-10-31', asOf: '2026-10-07' };
+    const november: OverviewQuery = { from: '2026-11-01', to: '2026-11-30', asOf: '2026-10-07' };
+    const tagsOf = (queryClient: QueryClient, range: OverviewQuery) =>
+      queryClient.getQueryData<HabitOverview[]>(habitKeys.overview(range))?.[0]?.taggedDays;
+
+    it('changes every loaded overview that covers the day, and only those', () => {
+      const queryClient = cacheWith(october, november);
+
+      applyTagChange(queryClient, {
+        habitId: 'a',
+        date: '2026-10-05',
+        tag: sick,
+        present: true,
+      });
+
+      expect(tagsOf(queryClient, october)).toEqual([{ date: '2026-10-05', tags: [sick] }]);
+      expect(tagsOf(queryClient, november)).toEqual([]);
+    });
+
+    it('takes the server’s answer for a day', () => {
+      const queryClient = cacheWith(october);
+
+      applyDayTags(queryClient, { habitId: 'a', date: '2026-10-31', tags: [sick, trip] });
+
+      expect(tagsOf(queryClient, october)).toEqual([{ date: '2026-10-31', tags: [sick, trip] }]);
+    });
   });
 });

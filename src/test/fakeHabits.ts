@@ -9,6 +9,7 @@ import type {
 import type { DayOfWeek } from '@/features/habits/weekdays';
 import { eachDayOfInterval, format, parseISO } from 'date-fns';
 import { isDue, recurrenceOf, weeklyRecurrence, type Recurrence } from './recurrence';
+import { createTagBook, type TagBook } from './tagBook';
 
 export interface FakeHabit {
   id: string;
@@ -32,10 +33,14 @@ type Call = keyof HabitsGateway;
  *
  * - `currentStreak` is a stand-in: the number of marks. The real rule lives in the backend; here
  *   it only has to *change* when a mark does, so a test can tell the screen asked for it again.
+ * - Tags on days live in the `tagBook` (pass one in to share it with `fakeTags`).
  * - `hold()` lets calls wait until `release()`, to look at the screen while a request is under way.
  * - `failNext()` makes the next call of that kind fail once.
  */
-export function fakeHabits(initial: FakeHabit[] = []) {
+export function fakeHabits(
+  initial: FakeHabit[] = [],
+  { tagBook = createTagBook() }: { tagBook?: TagBook } = {},
+) {
   // What the server answers in `scheduledDates`: the days of the range the habit is due on, none
   // before the start date.
   const scheduledDates = (
@@ -66,6 +71,8 @@ export function fakeHabits(initial: FakeHabit[] = []) {
     remove: [] as string[],
     /** `mark h-1 2026-10-07` / `unmark h-1 2026-10-07`, in the order the server saw them. */
     marks: [] as string[],
+    /** `tag h-1 2026-10-07 tag-1` / `untag …`, in the order the server saw them. */
+    tags: [] as string[],
   };
 
   let gate: Promise<void> = Promise.resolve();
@@ -123,8 +130,7 @@ export function fakeHabits(initial: FakeHabit[] = []) {
         completedDates: [...habit.completed]
           .filter((day) => day >= query.from && day <= query.to)
           .sort(),
-        // Tags come with F12; until then the stand-in knows none.
-        taggedDays: [],
+        taggedDays: tagBook.taggedDays(habit.id, query.from, query.to),
         currentStreak: habit.completed.size,
       }));
     },
@@ -178,6 +184,7 @@ export function fakeHabits(initial: FakeHabit[] = []) {
       calls.remove.push(id);
       await enter('remove');
       habits.splice(habits.indexOf(find(id)), 1);
+      tagBook.forgetHabit(id);
     },
 
     mark: async (habitId, date) => {
@@ -189,11 +196,26 @@ export function fakeHabits(initial: FakeHabit[] = []) {
         find(habitId).completed.delete(date),
       );
     },
+
+    tagDay: async (habitId, date, tagId) => {
+      calls.tags.push(`tag ${habitId} ${date} ${tagId}`);
+      await enter('tagDay');
+      find(habitId);
+      return { date, tags: tagBook.attach(habitId, date, tagId) };
+    },
+
+    untagDay: async (habitId, date, tagId) => {
+      calls.tags.push(`untag ${habitId} ${date} ${tagId}`);
+      await enter('untagDay');
+      find(habitId);
+      return { date, tags: tagBook.detach(habitId, date, tagId) };
+    },
   };
 
   return {
     gateway,
     calls,
+    tagBook,
 
     /** The marks the "server" holds for a habit. */
     marksOf: (id: string) => [...find(id).completed].sort(),

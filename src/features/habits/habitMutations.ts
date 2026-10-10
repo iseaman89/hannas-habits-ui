@@ -1,14 +1,28 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { tagKeys, type TagsGateway } from '@/features/tags';
 import { errorMessage } from '@/shared/api';
 import { useToast } from '@/shared/ui';
 import { habitKeys } from './habitQueries';
 import type { HabitInput, HabitsGateway } from './habitsGateway';
-import { applyCompletion, type CompletionChange } from './overviewCache';
+import {
+  applyCompletion,
+  applyDayTags,
+  applyTagChange,
+  type CompletionChange,
+  type TagChange,
+} from './overviewCache';
 
-/** After a change of the habits themselves every view of them is out of date. */
+/**
+ * After a change of the habits themselves every view of them is out of date - and the tags'
+ * use counts, which are counted over the habits' days (a deleted habit takes its days along).
+ */
 function useRefreshHabits() {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: habitKeys.all });
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: habitKeys.all }),
+      queryClient.invalidateQueries({ queryKey: tagKeys.all }),
+    ]);
 }
 
 export function useCreateHabit(gateway: HabitsGateway) {
@@ -65,5 +79,75 @@ export function useMarkHabit(gateway: HabitsGateway) {
         void queryClient.invalidateQueries({ queryKey: habitKeys.overviews });
       }
     },
+  });
+}
+
+/** What a tag mutation does when it was the last one pending: look at the server's truth once. */
+function useSettleDayTags() {
+  const queryClient = useQueryClient();
+  return () => {
+    if (queryClient.isMutating({ mutationKey: habitKeys.dayTags }) !== 1) return;
+    // Also the lists of tags: how often a tag is used (and so their order) just changed.
+    void queryClient.invalidateQueries({ queryKey: habitKeys.overviews });
+    void queryClient.invalidateQueries({ queryKey: tagKeys.all });
+  };
+}
+
+/**
+ * Putting an existing tag on a day, or taking it off, optimistically - the same three rules as
+ * the marks: one serial `scope` (a PUT and a DELETE of one tag must not overtake each other), a
+ * failure is undone by writing the inverse (not by restoring a snapshot that would also wipe the
+ * clicks after it), and the server is asked again only once, after the last pending call.
+ */
+export function useTagDay(gateway: HabitsGateway) {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const settle = useSettleDayTags();
+
+  return useMutation({
+    mutationKey: habitKeys.dayTags,
+    scope: { id: 'habit-day-tags' },
+    mutationFn: ({ habitId, date, tag, present }: TagChange) =>
+      present ? gateway.tagDay(habitId, date, tag.id) : gateway.untagDay(habitId, date, tag.id),
+    onMutate: async (change) => {
+      await queryClient.cancelQueries({ queryKey: habitKeys.overviews });
+      applyTagChange(queryClient, change);
+    },
+    onError: (error, change) => {
+      applyTagChange(queryClient, { ...change, present: !change.present });
+      toast.error(errorMessage(error, 'Could not save the tags. Please try again.'));
+    },
+    onSettled: settle,
+  });
+}
+
+/**
+ * A name that is not in the list yet: the tag is made (or found - creating is get-or-create) and
+ * put on the day. Not optimistic: there is no id before the server has answered. The answer is
+ * the day's tags, so the cache takes it as it is. Same scope as `useTagDay`, so it queues behind
+ * the clicks before it. The caller shows a failure next to the input, where the typed name stays.
+ */
+export function useTagDayWithNewTag(gateway: HabitsGateway, tags: TagsGateway) {
+  const queryClient = useQueryClient();
+  const settle = useSettleDayTags();
+
+  return useMutation({
+    mutationKey: habitKeys.dayTags,
+    scope: { id: 'habit-day-tags' },
+    mutationFn: async ({
+      habitId,
+      date,
+      name,
+    }: {
+      habitId: string;
+      date: string;
+      name: string;
+    }) => {
+      const tag = await tags.create(name);
+      return gateway.tagDay(habitId, date, tag.id);
+    },
+    onSuccess: (day, { habitId }) =>
+      applyDayTags(queryClient, { habitId, date: day.date, tags: day.tags }),
+    onSettled: settle,
   });
 }

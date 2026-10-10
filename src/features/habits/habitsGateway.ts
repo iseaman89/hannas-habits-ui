@@ -6,6 +6,8 @@ export type HabitDetails = Schema<'HabitDetailsDto'>;
 /** A habit as the plain list has it: enough to choose one by its title. */
 export type HabitListItem = Schema<'HabitListItemDto'>;
 export type CreatedHabit = Schema<'CreateHabitDto'>;
+/** One habit's day with the tags it carries, as the server answers after a change. */
+export type TaggedDay = Schema<'TaggedDayDto'>;
 
 /**
  * The range and the "today" of an overview. Optional in the OpenAPI document, but the server
@@ -45,6 +47,13 @@ export interface HabitsGateway {
   mark: (habitId: string, date: string) => Promise<void>;
   /** Takes the mark back. A day that is not marked is already what was asked for, not an error. */
   unmark: (habitId: string, date: string) => Promise<void>;
+  /**
+   * Puts a tag on the day, independent of the done mark. Idempotent; answers with the day's tags
+   * after the call, which is the truth even when another device changed the day meanwhile.
+   */
+  tagDay: (habitId: string, date: string, tagId: string) => Promise<TaggedDay>;
+  /** Takes a tag off the day. Idempotent, same answer as `tagDay`. */
+  untagDay: (habitId: string, date: string, tagId: string) => Promise<TaggedDay>;
 }
 
 export function createHabitsGateway(client: TypedApi): HabitsGateway {
@@ -76,6 +85,16 @@ export function createHabitsGateway(client: TypedApi): HabitsGateway {
         throw error;
       }
     },
+
+    tagDay: (habitId, date, tagId) =>
+      client.put('/api/habits/{habitId}/days/{date}/tags/{tagId}', {
+        path: { habitId, date, tagId },
+      }),
+
+    untagDay: (habitId, date, tagId) =>
+      client.delete('/api/habits/{habitId}/days/{date}/tags/{tagId}', {
+        path: { habitId, date, tagId },
+      }),
   };
 }
 
