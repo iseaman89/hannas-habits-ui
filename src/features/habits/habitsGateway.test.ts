@@ -9,12 +9,23 @@ function gatewayFor(respond: FakeReply | (() => FakeReply)) {
   return { gateway: createHabitsGateway(createTypedApi(http)), requests: server.requests };
 }
 
+const weekly = (weekdays: number[]) => ({
+  kind: 'weekly',
+  weekdays,
+  interval: 1,
+  anchor: null,
+  occurrence: null,
+  weekday: null,
+  dayOfMonth: null,
+});
+
 const overview = [
   {
     id: 'h-1',
     title: 'Stretch',
-    schedule: [1, 3, 5],
+    recurrence: weekly([1, 3, 5]),
     startDate: '2026-10-01',
+    scheduledDates: ['2026-10-02', '2026-10-05', '2026-10-07'],
     completedDates: ['2026-10-05'],
     currentStreak: 1,
   },
@@ -22,7 +33,7 @@ const overview = [
 
 describe('habits gateway', () => {
   it('lists the habits without a range', async () => {
-    const habits = [{ id: 'h-1', title: 'Stretch', description: null, schedule: [1, 3] }];
+    const habits = [{ id: 'h-1', title: 'Stretch', description: null, recurrence: weekly([1, 3]) }];
     const { gateway, requests } = gatewayFor({ status: 200, data: habits });
 
     await expect(gateway.list()).resolves.toEqual(habits);
@@ -56,7 +67,7 @@ describe('habits gateway', () => {
   });
 
   it('creates a habit with its start date and returns what the server made', async () => {
-    const created = { id: 'h-2', title: 'Read', schedule: [1], startDate: '2026-10-07' };
+    const created = { id: 'h-2', title: 'Read', recurrence: weekly([1]), startDate: '2026-10-07' };
     const { gateway, requests } = gatewayFor({ status: 201, data: created });
     const input = {
       title: 'Read',

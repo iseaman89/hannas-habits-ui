@@ -1,6 +1,6 @@
 import { eachDayOfInterval, format, parseISO } from 'date-fns';
 import { describe, expect, it } from 'vitest';
-import { isDue, recurrenceOf, weekdaysOf, weeklyRecurrence, type Recurrence } from './recurrence';
+import { isDue, recurrenceOf, weeklyRecurrence, type Recurrence } from './recurrence';
 
 // The stand-in server's rules are only worth something if they agree with a calendar. October
 // 2026 starts on a Thursday, November on a Sunday, February 2028 has 29 days.
@@ -116,20 +116,5 @@ describe('recurrenceOf', () => {
     expect(
       recurrenceOf({ kind: 'everyNDays', interval: 3, anchor: '2026-09-01' }, '2026-10-07').anchor,
     ).toBe('2026-09-01');
-  });
-});
-
-describe('weekdaysOf', () => {
-  it.each<[string, Recurrence, number[]]>([
-    ['weekly', weeklyRecurrence([1, 3]), [1, 3]],
-    ['the last Saturday', rule({ kind: 'monthlyOnWeekday', occurrence: 'last', weekday: 6 }), [6]],
-    [
-      'every N days',
-      rule({ kind: 'everyNDays', interval: 3, anchor: '2026-10-01' }),
-      [0, 1, 2, 3, 4, 5, 6],
-    ],
-    ['a date of the month', rule({ kind: 'monthlyOnDate', dayOfMonth: 5 }), [0, 1, 2, 3, 4, 5, 6]],
-  ])('%s', (_name, recurrence, days) => {
-    expect(weekdaysOf(recurrence)).toEqual(days);
   });
 });

@@ -8,15 +8,15 @@ import type {
 } from '@/features/habits/habitsGateway';
 import type { DayOfWeek } from '@/features/habits/weekdays';
 import { eachDayOfInterval, format, parseISO } from 'date-fns';
-import { isDue, recurrenceOf, weekdaysOf, weeklyRecurrence, type Recurrence } from './recurrence';
+import { isDue, recurrenceOf, weeklyRecurrence, type Recurrence } from './recurrence';
 
 export interface FakeHabit {
   id: string;
   title: string;
   description?: string | null;
   /** Shorthand for a rule: every week on these days. */
-  schedule?: DayOfWeek[];
-  /** Any rule; it wins over `schedule`. One of the two is needed. */
+  weekdays?: DayOfWeek[];
+  /** Any rule; it wins over `weekdays`. One of the two is needed. */
   recurrence?: Recurrence;
   startDate: string;
   /** Days with a mark, `yyyy-MM-dd`. */
@@ -46,12 +46,12 @@ export function fakeHabits(initial: FakeHabit[] = []) {
       .map((day) => format(day, 'yyyy-MM-dd'))
       .filter((day) => day >= habit.startDate && isDue(habit.recurrence, day));
 
-  const habits = initial.map(({ schedule, recurrence, ...habit }) => {
-    if (!recurrence && !schedule) throw new Error(`fakeHabits: ${habit.id} has no rule`);
+  const habits = initial.map(({ weekdays, recurrence, ...habit }) => {
+    if (!recurrence && !weekdays) throw new Error(`fakeHabits: ${habit.id} has no rule`);
     return {
       ...habit,
       description: habit.description ?? null,
-      recurrence: recurrence ?? weeklyRecurrence(schedule ?? []),
+      recurrence: recurrence ?? weeklyRecurrence(weekdays ?? []),
       completed: new Set(habit.completed),
     };
   });
@@ -107,7 +107,6 @@ export function fakeHabits(initial: FakeHabit[] = []) {
         id: habit.id,
         title: habit.title,
         description: habit.description,
-        schedule: weekdaysOf(habit.recurrence),
         recurrence: habit.recurrence,
       }));
     },
@@ -118,7 +117,6 @@ export function fakeHabits(initial: FakeHabit[] = []) {
       return habits.map<HabitOverview>((habit) => ({
         id: habit.id,
         title: habit.title,
-        schedule: weekdaysOf(habit.recurrence),
         recurrence: habit.recurrence,
         startDate: habit.startDate,
         scheduledDates: scheduledDates(habit, query),
@@ -137,7 +135,6 @@ export function fakeHabits(initial: FakeHabit[] = []) {
         id: habit.id,
         title: habit.title,
         description: habit.description,
-        schedule: weekdaysOf(habit.recurrence),
         recurrence: habit.recurrence,
         startDate: habit.startDate,
         createdAt: '2026-10-01T08:00:00Z',
@@ -159,7 +156,6 @@ export function fakeHabits(initial: FakeHabit[] = []) {
       return {
         id: habit.id,
         title: habit.title,
-        schedule: weekdaysOf(habit.recurrence),
         recurrence: habit.recurrence,
         startDate: input.startDate,
       };

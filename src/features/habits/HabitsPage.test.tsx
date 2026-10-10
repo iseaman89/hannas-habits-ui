@@ -15,7 +15,7 @@ const stretch: FakeHabit = {
   id: 'h-stretch',
   title: 'Stretch',
   description: 'Ten minutes, every morning',
-  schedule: [0, 1, 2, 3, 4, 5, 6],
+  weekdays: [0, 1, 2, 3, 4, 5, 6],
   startDate: '2026-10-01',
   completed: ['2026-10-05', '2026-10-06'],
 };
@@ -23,7 +23,7 @@ const stretch: FakeHabit = {
 const read: FakeHabit = {
   id: 'h-read',
   title: 'Read',
-  schedule: [1, 3, 5], // Mon, Wed, Fri
+  weekdays: [1, 3, 5], // Mon, Wed, Fri
   startDate: '2026-09-01',
   completed: [],
 };

@@ -21,8 +21,7 @@ export interface OverviewQuery {
 /**
  * What a person fills in. Leaving `description` out would clear it, so blank is an explicit
  * `null`. `startDate` (`yyyy-MM-dd`) is the first day the habit counts, in the client's local time.
- * `recurrence` is the rule that decides on which days the habit is due; the deprecated
- * `schedule` (weekdays only) is no longer sent.
+ * `recurrence` is the rule that decides on which days the habit is due.
  */
 export interface HabitInput {
   title: string;

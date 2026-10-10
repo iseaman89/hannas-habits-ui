@@ -4,8 +4,6 @@ import type { DayOfWeek } from '@/features/habits/weekdays';
 
 export type { Recurrence } from '@/features/habits/recurrence';
 
-const ALL_DAYS: DayOfWeek[] = [0, 1, 2, 3, 4, 5, 6];
-
 /** "On these weekdays, every week" - what every habit was before the recurrence rules (B13). */
 export function weeklyRecurrence(weekdays: readonly DayOfWeek[]): Recurrence {
   return {
@@ -54,16 +52,6 @@ export function recurrenceOf(request: RecurrenceRequest, startDate: string): Rec
       };
     }
   }
-}
-
-/**
- * The weekdays a rule can fall on - the deprecated `schedule` of an answer: the chosen days, the
- * one weekday of "the last Saturday", all seven for the rules that do not depend on the weekday.
- */
-export function weekdaysOf(rule: Recurrence): DayOfWeek[] {
-  if (rule.kind === 'weekly') return [...rule.weekdays];
-  if (rule.kind === 'monthlyOnWeekday' && rule.weekday !== null) return [rule.weekday];
-  return [...ALL_DAYS];
 }
 
 /** `yyyy-MM-dd` as a local calendar day (a time zone cannot shift it). */

@@ -528,7 +528,7 @@ describe('the habits of the day', () => {
       {
         id: 'h-stretch',
         title: 'Stretch',
-        schedule: [0, 1, 2, 3, 4, 5, 6],
+        weekdays: [0, 1, 2, 3, 4, 5, 6],
         startDate: '2026-10-01',
         completed: [],
       },

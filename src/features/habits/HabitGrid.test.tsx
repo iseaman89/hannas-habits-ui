@@ -20,7 +20,6 @@ const monWedFri = weeklyRecurrence([1, 3, 5]);
 const stretch: HabitOverview = {
   id: 'h-1',
   title: 'Stretch',
-  schedule: [0, 1, 2, 3, 4, 5, 6],
   recurrence: everyDay,
   startDate: '2026-10-01',
   scheduledDates: dueDays(everyDay, '2026-10-01'),
@@ -31,7 +30,6 @@ const stretch: HabitOverview = {
 const read: HabitOverview = {
   id: 'h-2',
   title: 'Read',
-  schedule: [1, 3, 5],
   recurrence: monWedFri,
   startDate: '2026-10-01',
   scheduledDates: dueDays(monWedFri, '2026-10-01'),

@@ -14,28 +14,28 @@ const NOW = new Date(2026, 9, 7, 12, 0);
 const stretch: FakeHabit = {
   id: 'h-stretch',
   title: 'Stretch',
-  schedule: [0, 1, 2, 3, 4, 5, 6],
+  weekdays: [0, 1, 2, 3, 4, 5, 6],
   startDate: '2026-10-01',
   completed: ['2026-10-05', '2026-10-06'],
 };
 const read: FakeHabit = {
   id: 'h-read',
   title: 'Read',
-  schedule: [1, 3, 5], // Mon, Wed, Fri
+  weekdays: [1, 3, 5], // Mon, Wed, Fri
   startDate: '2026-09-01',
   completed: [],
 };
 const run: FakeHabit = {
   id: 'h-run',
   title: 'Run',
-  schedule: [2, 4], // Tue, Thu
+  weekdays: [2, 4], // Tue, Thu
   startDate: '2026-09-01',
   completed: [],
 };
 const newcomer: FakeHabit = {
   id: 'h-new',
   title: 'Meditate',
-  schedule: [0, 1, 2, 3, 4, 5, 6],
+  weekdays: [0, 1, 2, 3, 4, 5, 6],
   startDate: '2026-10-08', // starts tomorrow
   completed: [],
 };

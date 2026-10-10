@@ -1440,7 +1440,6 @@ export interface components {
             /** Format: uuid */
             id: string;
             title: string;
-            schedule: components["schemas"]["DayOfWeek"][];
             recurrence: components["schemas"]["RecurrenceDto"];
             /** Format: date */
             startDate: string;
@@ -1448,7 +1447,6 @@ export interface components {
         CreateHabitRequest: {
             title?: string;
             description?: string | null;
-            schedule?: components["schemas"]["DayOfWeek"][] | null;
             /** Format: date */
             startDate?: string | null;
             recurrence?: components["schemas"]["RecurrenceRequest"] | null;
@@ -1488,7 +1486,6 @@ export interface components {
             id: string;
             title: string;
             description: string | null;
-            schedule: components["schemas"]["DayOfWeek"][];
             recurrence: components["schemas"]["RecurrenceDto"];
             /** Format: date */
             startDate: string;
@@ -1500,14 +1497,12 @@ export interface components {
             id: string;
             title: string;
             description: string | null;
-            schedule: components["schemas"]["DayOfWeek"][];
             recurrence: components["schemas"]["RecurrenceDto"];
         };
         HabitOverviewDto: {
             /** Format: uuid */
             id: string;
             title: string;
-            schedule: components["schemas"]["DayOfWeek"][];
             recurrence: components["schemas"]["RecurrenceDto"];
             /** Format: date */
             startDate: string;
@@ -1620,7 +1615,6 @@ export interface components {
         UpdateHabitRequest: {
             title?: string;
             description?: string | null;
-            schedule?: components["schemas"]["DayOfWeek"][] | null;
             /** Format: date */
             startDate?: string | null;
             recurrence?: components["schemas"]["RecurrenceRequest"] | null;

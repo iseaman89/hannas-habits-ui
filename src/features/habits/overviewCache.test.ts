@@ -9,7 +9,6 @@ function habit(id: string, completedDates: string[], currentStreak = 0): HabitOv
   return {
     id,
     title: `Habit ${id}`,
-    schedule: [0, 1, 2, 3, 4, 5, 6],
     recurrence: weeklyRecurrence([0, 1, 2, 3, 4, 5, 6]),
     startDate: '2026-01-01',
     scheduledDates: [],
