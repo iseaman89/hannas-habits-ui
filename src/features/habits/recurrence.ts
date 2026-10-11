@@ -153,6 +153,11 @@ export function recurrenceLabel(rule: RecurrenceValues): string {
   }
 }
 
+/** `recurrenceLabel` of a rule as the API sends it - the line under a habit's name. */
+export function recurrenceText(recurrence: Recurrence): string {
+  return recurrenceLabel(toRecurrenceValues(recurrence));
+}
+
 function formatDay(date: Date): string {
   return format(date, 'EEE d MMM yyyy');
 }

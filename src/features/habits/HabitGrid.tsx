@@ -12,7 +12,7 @@ import { daysOfMonth } from './months';
 import { PartsButton } from './PartsButton';
 import { StreakBadge } from './StreakBadge';
 import { isQuota, quotaProgressText, streakUnit } from './quota';
-import { recurrenceLabel, toRecurrenceValues } from './recurrence';
+import { recurrenceText } from './recurrence';
 import { partsLabel, subHabitProgress } from './subHabits';
 import { dayName, type DayOfWeek } from './weekdays';
 
@@ -159,9 +159,7 @@ function HabitRow({
   const quota = isQuota(habit.recurrence);
   const quotaProgress = quotaProgressText(habit, today, today);
   const parts = habit.subHabits.length > 0 ? partsLabel(habit.subHabits.length) : null;
-  const rule = [recurrenceLabel(toRecurrenceValues(habit.recurrence)), quotaProgress, parts]
-    .filter(Boolean)
-    .join(' · ');
+  const rule = [recurrenceText(habit.recurrence), quotaProgress, parts].filter(Boolean).join(' · ');
 
   return (
     <tr className="[&>*]:border-t [&>*]:border-divider">

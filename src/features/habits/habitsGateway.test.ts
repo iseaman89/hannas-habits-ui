@@ -56,6 +56,33 @@ describe('habits gateway', () => {
     });
   });
 
+  it('asks for the statistics of a range with the client’s today', async () => {
+    const statistics = [
+      {
+        id: 'h-1',
+        title: 'Stretch',
+        recurrence: weekly([1, 3, 5]),
+        startDate: '2026-10-01',
+        unit: 'days',
+        planned: 4,
+        done: 3,
+        lastDoneOn: '2026-10-05',
+        subHabits: [],
+      },
+    ];
+    const { gateway, requests } = gatewayFor({ status: 200, data: statistics });
+
+    await expect(
+      gateway.statistics({ from: '2026-10-01', to: '2026-10-31', asOf: '2026-10-07' }),
+    ).resolves.toEqual(statistics);
+
+    expect(requests[0]).toMatchObject({
+      method: 'get',
+      url: '/habits/statistics',
+      params: { from: '2026-10-01', to: '2026-10-31', asOf: '2026-10-07' },
+    });
+  });
+
   it('reads one habit by id', async () => {
     const habit = { id: 'h 1', title: 'Stretch', description: null };
     const { gateway, requests } = gatewayFor({ status: 200, data: habit });

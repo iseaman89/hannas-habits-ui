@@ -3,6 +3,7 @@ import type {
   HabitInput,
   HabitListItem,
   HabitOverview,
+  HabitStatistics,
   HabitsGateway,
   OverviewQuery,
   SubHabitInput,
@@ -18,6 +19,7 @@ import {
   weeklyRecurrence,
   type Recurrence,
 } from './recurrence';
+import { daysBetween, lastDoneUpTo, tallyDays, tallyPeriods, unitOf } from './statistics';
 import { createTagBook, type TagBook } from './tagBook';
 
 /** A part of a habit, as a test describes it. */
@@ -55,6 +57,9 @@ type Call = keyof HabitsGateway;
  * kind of hand-written fake). It keeps the habits and their marks, answers like the server
  * (ranges, creation order) and writes down every call.
  *
+ * - `statistics` counts like the backend's `HabitStatistics` (due days up to `asOf`, an open today
+ *   is no miss, a quota in whole weeks / months ending in the range), pinned by
+ *   `fakeHabits.statistics.test.ts`.
  * - `currentStreak` is a stand-in: the number of marks. The real rule lives in the backend; here
  *   it only has to *change* when a mark does, so a test can tell the screen asked for it again.
  * - Tags on days live in the `tagBook` (pass one in to share it with `fakeTags`).
@@ -147,6 +152,7 @@ export function fakeHabits(
   const calls = {
     list: 0,
     overview: [] as OverviewQuery[],
+    statistics: [] as OverviewQuery[],
     details: [] as string[],
     create: [] as HabitInput[],
     update: [] as { id: string; input: HabitInput }[],
@@ -237,6 +243,44 @@ export function fakeHabits(
             .sort(),
         })),
       }));
+    },
+
+    statistics: async (query) => {
+      calls.statistics.push(query);
+      await enter('statistics');
+
+      return habits.map<HabitStatistics>((habit) => {
+        const quota = unitOf(habit.recurrence) !== 'days';
+        // The due days up to "today"; a day after it is not judged yet.
+        const horizon = query.to < query.asOf ? query.to : query.asOf;
+        const dueDays = daysBetween(query.from, horizon).filter(
+          (day) => day >= habit.startDate && isDue(habit.recurrence, day),
+        );
+        const tally = quota
+          ? tallyPeriods(habit.recurrence, habit.startDate, habit.completed, query)
+          : tallyDays(dueDays, habit.completed, query.asOf);
+
+        return {
+          id: habit.id,
+          title: habit.title,
+          recurrence: habit.recurrence,
+          startDate: habit.startDate,
+          unit: unitOf(habit.recurrence),
+          ...tally,
+          lastDoneOn: lastDoneUpTo(habit.completed, query.asOf),
+          subHabits: habit.parts.map((part) => ({
+            id: part.id,
+            title: part.title,
+            weekdays: [...part.weekdays],
+            ...tallyDays(
+              dueDays.filter((day) => partIsDue(habit, part, day)),
+              part.completed,
+              query.asOf,
+            ),
+            lastDoneOn: lastDoneUpTo(part.completed, query.asOf),
+          })),
+        };
+      });
     },
 
     details: async (id) => {

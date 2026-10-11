@@ -4,6 +4,9 @@ import type { DayOfWeek } from './weekdays';
 
 export type HabitOverview = Schema<'HabitOverviewDto'>;
 export type HabitDetails = Schema<'HabitDetailsDto'>;
+/** One habit's statistic: planned, done and the day it was last done, with the same for its parts. */
+export type HabitStatistics = Schema<'HabitStatisticsDto'>;
+export type SubHabitStatistics = Schema<'SubHabitStatisticsDto'>;
 /** A habit as the plain list has it: enough to choose one by its title. */
 export type HabitListItem = Schema<'HabitListItemDto'>;
 export type CreatedHabit = Schema<'CreateHabitDto'>;
@@ -49,6 +52,12 @@ export interface HabitsGateway {
   /** Every habit, in creation order - for a picker; no dates, no marks, no streak. */
   list: (signal?: AbortSignal) => Promise<HabitListItem[]>;
   overview: (query: OverviewQuery, signal?: AbortSignal) => Promise<HabitOverview[]>;
+  /**
+   * How much of every habit and of each of its parts was planned and done in the range, judged as
+   * of `asOf`, and the day it was last done. The server counts; the same three values as the
+   * overview's query.
+   */
+  statistics: (query: OverviewQuery, signal?: AbortSignal) => Promise<HabitStatistics[]>;
   /** One habit with the fields the overview leaves out (the description). */
   details: (id: string, signal?: AbortSignal) => Promise<HabitDetails>;
   create: (input: HabitInput) => Promise<CreatedHabit>;
@@ -91,6 +100,8 @@ export function createHabitsGateway(client: TypedApi): HabitsGateway {
     list: (signal) => client.get('/api/habits', { signal }),
 
     overview: (query, signal) => client.get('/api/habits/overview', { query, signal }),
+
+    statistics: (query, signal) => client.get('/api/habits/statistics', { query, signal }),
 
     details: (id, signal) => client.get('/api/habits/{id}', { path: { id }, signal }),
 
