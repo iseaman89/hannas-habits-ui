@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { Pencil, Trash2 } from 'lucide-react';
+import { ListChecks, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { toApiDate } from '@/shared/lib/dates';
 import { IconButton } from '@/shared/ui';
@@ -9,9 +9,11 @@ import { DayCell } from './DayCell';
 import type { HabitOverview } from './habitsGateway';
 import { scrollLeftToCenter } from './gridScroll';
 import { daysOfMonth } from './months';
+import { PartsButton } from './PartsButton';
 import { StreakBadge } from './StreakBadge';
 import { isQuota, quotaProgressText, streakUnit } from './quota';
 import { recurrenceLabel, toRecurrenceValues } from './recurrence';
+import { partsLabel, subHabitProgress } from './subHabits';
 import { dayName, type DayOfWeek } from './weekdays';
 
 interface HabitGridProps {
@@ -22,6 +24,10 @@ interface HabitGridProps {
   today: string;
   /** `done` is what the cell should become. */
   onToggle: (habit: HabitOverview, date: string, done: boolean) => void;
+  /** Opens the parts a habit has on one day, to tick them one by one. */
+  onDayParts: (habit: HabitOverview, date: string) => void;
+  /** Opens the habit's parts to add, change and remove them. */
+  onParts: (habit: HabitOverview) => void;
   onEdit: (habit: HabitOverview) => void;
   onDelete: (habit: HabitOverview) => void;
 }
@@ -35,7 +41,16 @@ const stickyCell = 'sticky left-0 z-10 bg-surface';
  * opens scrolled to today (to its start when today is not in it), so that on a phone - where only
  * a few days fit beside the names - the day that matters is the one in view.
  */
-export function HabitGrid({ habits, month, today, onToggle, onEdit, onDelete }: HabitGridProps) {
+export function HabitGrid({
+  habits,
+  month,
+  today,
+  onToggle,
+  onDayParts,
+  onParts,
+  onEdit,
+  onDelete,
+}: HabitGridProps) {
   const days = daysOfMonth(month);
   const scroller = useRef<HTMLDivElement>(null);
   const monthKey = toApiDate(days[0] ?? month);
@@ -109,6 +124,8 @@ export function HabitGrid({ habits, month, today, onToggle, onEdit, onDelete }: 
               days={days}
               today={today}
               onToggle={onToggle}
+              onDayParts={onDayParts}
+              onParts={onParts}
               onEdit={onEdit}
               onDelete={onDelete}
             />
@@ -119,17 +136,30 @@ export function HabitGrid({ habits, month, today, onToggle, onEdit, onDelete }: 
   );
 }
 
-interface HabitRowProps extends Pick<HabitGridProps, 'today' | 'onToggle' | 'onEdit' | 'onDelete'> {
+interface HabitRowProps extends Pick<
+  HabitGridProps,
+  'today' | 'onToggle' | 'onDayParts' | 'onParts' | 'onEdit' | 'onDelete'
+> {
   habit: HabitOverview;
   days: readonly Date[];
 }
 
-function HabitRow({ habit, days, today, onToggle, onEdit, onDelete }: HabitRowProps) {
+function HabitRow({
+  habit,
+  days,
+  today,
+  onToggle,
+  onDayParts,
+  onParts,
+  onEdit,
+  onDelete,
+}: HabitRowProps) {
   const done = new Set(habit.completedDates);
   const due = new Set(habit.scheduledDates);
   const quota = isQuota(habit.recurrence);
-  const progress = quotaProgressText(habit, today, today);
-  const rule = [recurrenceLabel(toRecurrenceValues(habit.recurrence)), progress]
+  const quotaProgress = quotaProgressText(habit, today, today);
+  const parts = habit.subHabits.length > 0 ? partsLabel(habit.subHabits.length) : null;
+  const rule = [recurrenceLabel(toRecurrenceValues(habit.recurrence)), quotaProgress, parts]
     .filter(Boolean)
     .join(' · ');
 
@@ -147,6 +177,9 @@ function HabitRow({ habit, days, today, onToggle, onEdit, onDelete }: HabitRowPr
             </p>
           </div>
           <div className="flex">
+            <IconButton label={`Parts of ${habit.title}`} size="sm" onClick={() => onParts(habit)}>
+              <ListChecks />
+            </IconButton>
             <IconButton label={`Edit ${habit.title}`} size="sm" onClick={() => onEdit(habit)}>
               <Pencil />
             </IconButton>
@@ -168,9 +201,17 @@ function HabitRow({ habit, days, today, onToggle, onEdit, onDelete }: HabitRowPr
           quota,
         });
         const label = `${habit.title}, ${format(date, 'EEE d MMM')}`;
+        const progress = subHabitProgress(habit, key);
         return (
-          <td key={key} className="px-0.5 py-2 text-center">
+          <td key={key} className="px-0.5 py-2 text-center align-top">
             <DayCell state={state} label={label} onToggle={() => onToggle(habit, key, !isDone)} />
+            {progress && (
+              <PartsButton
+                label={label}
+                progress={progress}
+                onOpen={() => onDayParts(habit, key)}
+              />
+            )}
           </td>
         );
       })}

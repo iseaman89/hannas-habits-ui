@@ -32,7 +32,7 @@ export function habitWeekdays(recurrence: Recurrence): DayOfWeek[] {
  * weekday is the part's own) and says it in each part's `scheduledDates`; the client only looks it
  * up, as for the habit's own cells.
  */
-export function dueSubHabits(habit: Pick<HabitOverview, 'subHabits'>, date: string): SubHabit[] {
+export function dueSubHabits(habit: { subHabits: readonly SubHabit[] }, date: string): SubHabit[] {
   return habit.subHabits.filter((part) => part.scheduledDates.includes(date));
 }
 
@@ -43,7 +43,7 @@ export interface SubHabitProgress {
 
 /** How far the day's parts have come; `null` when none is due (the day is the habit's own business). */
 export function subHabitProgress(
-  habit: Pick<HabitOverview, 'subHabits'>,
+  habit: { subHabits: readonly SubHabit[] },
   date: string,
 ): SubHabitProgress | null {
   const due = dueSubHabits(habit, date);

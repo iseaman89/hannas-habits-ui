@@ -15,6 +15,7 @@ import {
   SkeletonGroup,
 } from '@/shared/ui';
 import { CreateHabitDialog } from './CreateHabitDialog';
+import { DayPartsDialog } from './DayPartsDialog';
 import { DeleteHabitDialog } from './DeleteHabitDialog';
 import { EditHabitDialog } from './EditHabitDialog';
 import { GridLegend } from './GridLegend';
@@ -23,12 +24,15 @@ import { HabitGrid } from './HabitGrid';
 import { useMarkHabit } from './habitMutations';
 import { useHabitOverview } from './habitQueries';
 import { habitsGateway, type HabitsGateway } from './habitsGateway';
+import { SubHabitsDialog } from './SubHabitsDialog';
 import { monthRange, parseMonthParam, toMonthParam } from './months';
 
 type DialogState =
   | { kind: 'none' }
   | { kind: 'create' }
   | { kind: 'edit'; habitId: string }
+  | { kind: 'parts'; habitId: string }
+  | { kind: 'day-parts'; habitId: string; date: string }
   | { kind: 'delete'; habit: { id: string; title: string } };
 
 /**
@@ -53,6 +57,13 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
   }
 
   const closeDialog = () => setDialog({ kind: 'none' });
+
+  // The parts' dialogs read their habit from the overview on every render, so a tick or a new part
+  // shows in them as soon as it is in the cache; a habit that is gone closes them.
+  const dialogHabit =
+    dialog.kind === 'parts' || dialog.kind === 'day-parts'
+      ? overview.data?.find((habit) => habit.id === dialog.habitId)
+      : undefined;
 
   /** What the card shows. Data that is there wins: a refresh that fails must not wipe the grid. */
   function renderBody() {
@@ -96,12 +107,17 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
           month={month}
           today={today}
           onToggle={(habit, date, done) => mark.mutate({ habitId: habit.id, date, done })}
+          onDayParts={(habit, date) => setDialog({ kind: 'day-parts', habitId: habit.id, date })}
+          onParts={(habit) => setDialog({ kind: 'parts', habitId: habit.id })}
           onEdit={(habit) => setDialog({ kind: 'edit', habitId: habit.id })}
           onDelete={(habit) =>
             setDialog({ kind: 'delete', habit: { id: habit.id, title: habit.title } })
           }
         />
-        <GridLegend quota={habits.some((habit) => isQuota(habit.recurrence))} />
+        <GridLegend
+          quota={habits.some((habit) => isQuota(habit.recurrence))}
+          parts={habits.some((habit) => habit.subHabits.length > 0)}
+        />
       </div>
     );
   }
@@ -151,6 +167,21 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
       <EditHabitDialog
         gateway={gateway}
         habitId={dialog.kind === 'edit' ? dialog.habitId : null}
+        onClose={closeDialog}
+      />
+      <SubHabitsDialog
+        gateway={gateway}
+        habit={dialog.kind === 'parts' ? (dialogHabit ?? null) : null}
+        onClose={closeDialog}
+      />
+      <DayPartsDialog
+        gateway={gateway}
+        today={today}
+        target={
+          dialog.kind === 'day-parts' && dialogHabit
+            ? { habit: dialogHabit, date: dialog.date }
+            : null
+        }
         onClose={closeDialog}
       />
       <DeleteHabitDialog

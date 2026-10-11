@@ -5,11 +5,13 @@ import { parseApiDate, toApiDate } from '@/shared/lib/dates';
 import { useToday } from '@/shared/lib/useToday';
 import { Button, Card, Checkbox, FormMessage, Skeleton, SkeletonGroup } from '@/shared/ui';
 import { cellState, isToggleable, type CellState } from './cells';
-import { useMarkHabit } from './habitMutations';
+import { useMarkHabit, useMarkSubHabit } from './habitMutations';
 import { useHabitOverview } from './habitQueries';
 import { habitsGateway, type HabitOverview, type HabitsGateway } from './habitsGateway';
 import { isQuota, quotaProgressText, streakUnit } from './quota';
 import { StreakBadge } from './StreakBadge';
+import { SubHabitChecklist } from './SubHabitChecklist';
+import { dueSubHabits } from './subHabits';
 
 interface TodayHabitsCardProps {
   /** The day the diary shows, `yyyy-MM-dd`. */
@@ -35,6 +37,7 @@ export function TodayHabitsCard({ date, gateway = habitsGateway }: TodayHabitsCa
   const today = toApiDate(useToday());
   const overview = useHabitOverview(gateway, { from: date, to: date, asOf: today });
   const mark = useMarkHabit(gateway);
+  const markPart = useMarkSubHabit(gateway);
 
   // `date` comes from a validated route, so the parse only fails for a caller that got it wrong.
   const day = parseApiDate(date);
@@ -84,22 +87,36 @@ export function TodayHabitsCard({ date, gateway = habitsGateway }: TodayHabitsCa
     return (
       <ul className="flex flex-col gap-3">
         {planned.map(({ habit, state }) => (
-          <li key={habit.id} className="flex items-center gap-3">
-            <Checkbox
-              shape="circle"
-              tone="accent-2"
-              label={habit.title}
-              checked={state === 'done'}
-              disabled={!isToggleable(state)}
-              onChange={(done) => mark.mutate({ habitId: habit.id, date, done })}
-            />
-            <span className="min-w-0 flex-1">
-              <span aria-hidden className="block truncate font-semibold">
-                {habit.title}
+          <li key={habit.id} className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                shape="circle"
+                tone="accent-2"
+                label={habit.title}
+                checked={state === 'done'}
+                disabled={!isToggleable(state)}
+                onChange={(done) => mark.mutate({ habitId: habit.id, date, done })}
+              />
+              <span className="min-w-0 flex-1">
+                <span aria-hidden className="block truncate font-semibold">
+                  {habit.title}
+                </span>
+                <QuotaProgress habit={habit} day={date} today={today} />
               </span>
-              <QuotaProgress habit={habit} day={date} today={today} />
-            </span>
-            <StreakBadge days={habit.currentStreak} unit={streakUnit(habit.recurrence)} />
+              <StreakBadge days={habit.currentStreak} unit={streakUnit(habit.recurrence)} />
+            </div>
+            {dueSubHabits(habit, date).length > 0 && (
+              // Under the title (28 px box + 12 px gap in), so the parts read as part of the habit.
+              <SubHabitChecklist
+                className="ml-10"
+                habit={habit}
+                date={date}
+                today={today}
+                onToggle={(part, done) =>
+                  markPart.mutate({ habitId: habit.id, subHabitId: part.id, date, done })
+                }
+              />
+            )}
           </li>
         ))}
       </ul>

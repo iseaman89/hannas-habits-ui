@@ -76,7 +76,13 @@ const phone: HabitOverview = {
 };
 
 function renderGrid(overrides: Partial<Parameters<typeof HabitGrid>[0]> = {}) {
-  const handlers = { onToggle: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn() };
+  const handlers = {
+    onToggle: vi.fn(),
+    onDayParts: vi.fn(),
+    onParts: vi.fn(),
+    onEdit: vi.fn(),
+    onDelete: vi.fn(),
+  };
   render(
     <HabitGrid
       habits={[stretch, read]}
@@ -251,6 +257,73 @@ describe('HabitGrid', () => {
     renderGrid({ habits: [{ ...read, completedDates: ['2026-10-06'] }] }); // a Tuesday
 
     expect(screen.getByRole('img', { name: 'Read, Tue 6 Oct: not scheduled' })).toBeInTheDocument();
+  });
+
+  describe('parts of a habit', () => {
+    // Mon, Wed, Fri habit with two parts: legs on Mondays, arms on Mondays and Wednesdays.
+    const legs = {
+      id: 's-legs',
+      title: 'Legs',
+      weekdays: [1 as const],
+      scheduledDates: ['2026-10-05', '2026-10-12'],
+      completedDates: ['2026-10-05'],
+    };
+    const arms = {
+      id: 's-arms',
+      title: 'Arms',
+      weekdays: [1 as const, 3 as const],
+      scheduledDates: ['2026-10-05', '2026-10-07', '2026-10-12'],
+      completedDates: [],
+    };
+    const withParts: HabitOverview = { ...read, subHabits: [legs, arms] };
+    const rowOfRead = () =>
+      screen.getByRole('rowheader', { name: /^Read/ }).closest('tr') as HTMLElement;
+
+    it('shows how far the day’s parts have come, under the days they are due', () => {
+      renderGrid({ habits: [withParts] });
+
+      const row = rowOfRead();
+      expect(
+        within(row).getByRole('button', { name: 'Parts, Read, Mon 5 Oct: 1 of 2 done' }),
+      ).toHaveTextContent('1/2');
+      expect(
+        within(row).getByRole('button', { name: 'Parts, Read, Wed 7 Oct: 0 of 1 done' }),
+      ).toHaveTextContent('0/1');
+      // Two Mondays and one Wednesday: nothing under any other day, and Friday has no part.
+      expect(within(row).getAllByRole('button', { name: /^Parts, / })).toHaveLength(3);
+    });
+
+    it('shows nothing under the days of a habit without parts', () => {
+      renderGrid();
+
+      expect(screen.queryByRole('button', { name: /^Parts, / })).not.toBeInTheDocument();
+    });
+
+    it('opens the day’s parts, and keeps that apart from ticking the day', async () => {
+      const user = userEvent.setup();
+      const { onDayParts, onToggle } = renderGrid({ habits: [withParts] });
+
+      await user.click(screen.getByRole('button', { name: 'Parts, Read, Wed 7 Oct: 0 of 1 done' }));
+
+      expect(onDayParts).toHaveBeenCalledOnce();
+      expect(onDayParts).toHaveBeenCalledWith(withParts, '2026-10-07');
+      expect(onToggle).not.toHaveBeenCalled();
+    });
+
+    it('says how many parts a habit has, after its rule', () => {
+      renderGrid({ habits: [withParts] });
+
+      expect(within(rowOfRead()).getByText('Mon · Wed · Fri · 2 parts')).toBeInTheDocument();
+    });
+
+    it('offers the parts of every habit, also one that has none yet', async () => {
+      const user = userEvent.setup();
+      const { onParts } = renderGrid();
+
+      await user.click(screen.getByRole('button', { name: 'Parts of Read' }));
+
+      expect(onParts).toHaveBeenCalledWith(read);
+    });
   });
 
   describe('a quota habit ("3 times a week")', () => {

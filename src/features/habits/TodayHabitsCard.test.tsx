@@ -217,6 +217,87 @@ describe('a quota habit', () => {
   });
 });
 
+describe('the parts of a habit', () => {
+  // Mon, Wed, Fri: legs on Mondays, arms on Mondays and Wednesdays, core on Fridays.
+  const sport: FakeHabit = {
+    id: 'h-sport',
+    title: 'Sport',
+    weekdays: [1, 3, 5],
+    startDate: '2026-09-01',
+    completed: [],
+    subHabits: [
+      { id: 's-legs', title: 'Legs', weekdays: [1], completed: ['2026-10-05'] },
+      { id: 's-arms', title: 'Arms', weekdays: [1, 3] },
+      { id: 's-core', title: 'Core', weekdays: [5] },
+    ],
+  };
+
+  it('lists the parts that are due that day under the habit, the done ones ticked', async () => {
+    renderCard(fakeHabits([sport]), '2026-10-05'); // a Monday: legs and arms
+
+    expect(await screen.findByRole('checkbox', { name: 'Sport: Legs' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Sport: Arms' })).not.toBeChecked();
+    expect(screen.queryByRole('checkbox', { name: 'Sport: Core' })).not.toBeInTheDocument();
+  });
+
+  it('lists nothing for a habit without parts, and nothing for a day no part is due', async () => {
+    renderCard(fakeHabits([sport, read]));
+
+    // Wednesday: only arms is due, and Read has no parts.
+    expect(await screen.findByRole('checkbox', { name: 'Sport: Arms' })).toBeInTheDocument();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(3); // Sport, Arms, Read
+  });
+
+  it('ticks one part, sends it, and completes the habit’s day with the last one', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([sport]);
+    renderCard(fake, '2026-10-05');
+
+    await user.click(await screen.findByRole('checkbox', { name: 'Sport: Arms' }));
+
+    expect(screen.getByRole('checkbox', { name: 'Sport' })).toBeChecked();
+    expect(screen.getByRole('link', { name: /^1 of 1/ })).toBeInTheDocument();
+    await waitFor(() => expect(fake.marksOf('h-sport')).toEqual(['2026-10-05']));
+    expect(fake.calls.marks).toEqual(['mark-part h-sport s-arms 2026-10-05']);
+  });
+
+  it('ticks the parts with the habit, and clears them with an un-tick', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([sport]);
+    renderCard(fake, '2026-10-05');
+
+    await user.click(await screen.findByRole('checkbox', { name: 'Sport' }));
+    expect(screen.getByRole('checkbox', { name: 'Sport: Legs' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Sport: Arms' })).toBeChecked();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Sport' }));
+    expect(screen.getByRole('checkbox', { name: 'Sport: Legs' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Sport: Arms' })).not.toBeChecked();
+    await waitFor(() => expect(fake.calls.marks).toHaveLength(2));
+  });
+
+  it('cannot tick the parts of a day that has not come yet', async () => {
+    renderCard(fakeHabits([sport]), '2026-10-09'); // the Friday: core
+
+    expect(await screen.findByRole('checkbox', { name: 'Sport: Core' })).toBeDisabled();
+  });
+
+  it('puts a part back when the server refuses it', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([sport]);
+    fake.failNext('markSubHabit', apiError(500, { detail: 'Not today.' }));
+    renderCard(fake, '2026-10-05');
+
+    await user.click(await screen.findByRole('checkbox', { name: 'Sport: Arms' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Not today.');
+    await waitFor(() =>
+      expect(screen.getByRole('checkbox', { name: 'Sport: Arms' })).not.toBeChecked(),
+    );
+    expect(screen.getByRole('checkbox', { name: 'Sport' })).not.toBeChecked();
+  });
+});
+
 describe('ticking', () => {
   it('marks the viewed day, not today, and changes the box at once', async () => {
     const user = userEvent.setup();

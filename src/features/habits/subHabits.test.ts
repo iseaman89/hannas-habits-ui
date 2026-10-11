@@ -88,6 +88,17 @@ describe('subHabitProgress', () => {
 
     expect(subHabitProgress({ subHabits: [stray] }, '2026-10-06')).toBeNull();
   });
+
+  it('counts only the due parts, also beside one that is ticked on a day it is not due on', () => {
+    // Arms is due on Wednesday only (here); its tick on Monday is a mark and nothing more.
+    const strayArms = { ...arms, scheduledDates: ['2026-10-07'], completedDates: ['2026-10-05'] };
+    const openLegs = { ...legs, completedDates: [] };
+
+    expect(subHabitProgress({ subHabits: [openLegs, strayArms] }, '2026-10-05')).toEqual({
+      due: 1,
+      done: 0,
+    });
+  });
 });
 
 describe('partsLabel', () => {
