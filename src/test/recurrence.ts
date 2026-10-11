@@ -116,6 +116,17 @@ export function isDue(rule: Recurrence, day: string): boolean {
 }
 
 /**
+ * The weekdays a habit is "planned on": what a part of it may choose from (the backend's
+ * `Habit.EnsureWeekdaysAreOfTheHabit`, written out again for the stand-in server). A weekly rule
+ * has its chosen days, "the last Saturday" that weekday, any other rule has none of its own.
+ */
+export function plannedWeekdays(rule: Recurrence): DayOfWeek[] {
+  if (rule.kind === 'weekly') return [...rule.weekdays];
+  if (rule.kind === 'monthlyOnWeekday') return rule.weekday === null ? [] : [rule.weekday];
+  return [0, 1, 2, 3, 4, 5, 6];
+}
+
+/**
  * The weeks (Monday to Sunday) or months of a quota habit that touch `from..to`, with the days
  * `completed` in each from the start date on - the stand-in for the server's `quotaPeriods`. A
  * period that ended before the start is left out. Empty for any other rule.

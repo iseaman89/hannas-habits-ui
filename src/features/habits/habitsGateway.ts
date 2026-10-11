@@ -1,5 +1,6 @@
 import { ApiError, api, type Schema, type TypedApi } from '@/shared/api';
 import type { RecurrenceRequest } from './recurrence';
+import type { DayOfWeek } from './weekdays';
 
 export type HabitOverview = Schema<'HabitOverviewDto'>;
 export type HabitDetails = Schema<'HabitDetailsDto'>;
@@ -8,6 +9,8 @@ export type HabitListItem = Schema<'HabitListItemDto'>;
 export type CreatedHabit = Schema<'CreateHabitDto'>;
 /** One habit's day with the tags it carries, as the server answers after a change. */
 export type TaggedDay = Schema<'TaggedDayDto'>;
+/** A part of a habit as the server holds it: its title and the weekdays it is planned on. */
+export type SubHabitDetails = Schema<'SubHabitDto'>;
 
 /**
  * The range and the "today" of an overview. Optional in the OpenAPI document, but the server
@@ -32,6 +35,15 @@ export interface HabitInput {
   startDate: string;
 }
 
+/**
+ * What a person fills in for a part. Both are sent every time: a part is replaced as a whole, and
+ * the weekdays must be days the habit itself is planned on.
+ */
+export interface SubHabitInput {
+  title: string;
+  weekdays: DayOfWeek[];
+}
+
 /** The calls the habits screen makes. Dates are `yyyy-MM-dd`. */
 export interface HabitsGateway {
   /** Every habit, in creation order - for a picker; no dates, no marks, no streak. */
@@ -54,6 +66,24 @@ export interface HabitsGateway {
   tagDay: (habitId: string, date: string, tagId: string) => Promise<TaggedDay>;
   /** Takes a tag off the day. Idempotent, same answer as `tagDay`. */
   untagDay: (habitId: string, date: string, tagId: string) => Promise<TaggedDay>;
+  /** A new part of the habit, planned on some of its weekdays. Answers with the part. */
+  addSubHabit: (habitId: string, input: SubHabitInput) => Promise<SubHabitDetails>;
+  /** The whole part: a new title and / or other weekdays. Its ticks stay. */
+  updateSubHabit: (
+    habitId: string,
+    subHabitId: string,
+    input: SubHabitInput,
+  ) => Promise<SubHabitDetails>;
+  /** Removes the part with its ticks; the habit's own days stay. A part that is gone is not an error. */
+  removeSubHabit: (habitId: string, subHabitId: string) => Promise<void>;
+  /**
+   * Ticks a part on a day. Idempotent on the server, which also completes the habit's day when
+   * this was the last due part. The answer (the day after the call) is not used: the screen asks
+   * for the overview again, like after a habit's own tick.
+   */
+  markSubHabit: (habitId: string, subHabitId: string, date: string) => Promise<void>;
+  /** Takes a part's tick back. A tick that is not there is already what was asked for. */
+  unmarkSubHabit: (habitId: string, subHabitId: string, date: string) => Promise<void>;
 }
 
 export function createHabitsGateway(client: TypedApi): HabitsGateway {
@@ -95,6 +125,46 @@ export function createHabitsGateway(client: TypedApi): HabitsGateway {
       client.delete('/api/habits/{habitId}/days/{date}/tags/{tagId}', {
         path: { habitId, date, tagId },
       }),
+
+    addSubHabit: (habitId, input) =>
+      client.post('/api/habits/{habitId}/sub-habits', { path: { habitId }, body: input }),
+
+    updateSubHabit: (habitId, subHabitId, input) =>
+      client.put('/api/habits/{habitId}/sub-habits/{subHabitId}', {
+        path: { habitId, subHabitId },
+        body: input,
+      }),
+
+    removeSubHabit: async (habitId, subHabitId) => {
+      try {
+        await client.delete('/api/habits/{habitId}/sub-habits/{subHabitId}', {
+          path: { habitId, subHabitId },
+        });
+      } catch (error) {
+        // Gone already (another device, another tab): that is the end state that was asked for.
+        if (error instanceof ApiError && error.status === 404) return;
+        throw error;
+      }
+    },
+
+    markSubHabit: async (habitId, subHabitId, date) => {
+      await client.put('/api/habits/{habitId}/sub-habits/{subHabitId}/records/{date}', {
+        path: { habitId, subHabitId, date },
+      });
+    },
+
+    unmarkSubHabit: async (habitId, subHabitId, date) => {
+      try {
+        await client.delete('/api/habits/{habitId}/sub-habits/{subHabitId}/records/{date}', {
+          path: { habitId, subHabitId, date },
+        });
+      } catch (error) {
+        // Like a habit's own un-mark: a tick that is not there (or a part that is gone) is not
+        // marked, which is what the person asked for.
+        if (error instanceof ApiError && error.status === 404) return;
+        throw error;
+      }
+    },
   };
 }
 
