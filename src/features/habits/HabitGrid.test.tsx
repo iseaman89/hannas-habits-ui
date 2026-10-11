@@ -27,6 +27,7 @@ const stretch: HabitOverview = {
   taggedDays: [],
   quotaPeriods: [],
   currentStreak: 4,
+  subHabits: [],
 };
 
 const read: HabitOverview = {
@@ -39,6 +40,7 @@ const read: HabitOverview = {
   taggedDays: [],
   quotaPeriods: [],
   currentStreak: 0,
+  subHabits: [],
 };
 
 const gymRule = { ...weeklyRecurrence([]), kind: 'timesPerWeek' as const, times: 3 };
@@ -61,6 +63,7 @@ const gym: HabitOverview = {
     { from: '2026-10-26', to: '2026-11-01', done: 0 },
   ],
   currentStreak: 3,
+  subHabits: [],
 };
 
 const phone: HabitOverview = {

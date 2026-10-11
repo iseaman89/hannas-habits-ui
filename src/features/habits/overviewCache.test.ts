@@ -23,6 +23,7 @@ function habit(id: string, completedDates: string[], currentStreak = 0): HabitOv
     taggedDays: [],
     quotaPeriods: [],
     currentStreak,
+    subHabits: [],
   };
 }
 

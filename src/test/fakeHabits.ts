@@ -145,6 +145,7 @@ export function fakeHabits(
           query.to,
         ),
         currentStreak: habit.completed.size,
+        subHabits: [],
       }));
     },
 
@@ -159,6 +160,7 @@ export function fakeHabits(
         recurrence: habit.recurrence,
         startDate: habit.startDate,
         createdAt: '2026-10-01T08:00:00Z',
+        subHabits: [],
       } satisfies HabitDetails;
     },
 
