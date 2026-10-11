@@ -27,12 +27,6 @@ export function GridLegend({ quota = false }: { quota?: boolean }) {
           Not done (any day counts)
         </li>
       )}
-      <li className="flex items-center gap-2">
-        <span aria-hidden className="grid size-5 place-items-center">
-          <span className="block size-2 rounded-full bg-accent" />
-        </span>
-        Tagged day (click the dot under a day to add tags)
-      </li>
     </ul>
   );
 }

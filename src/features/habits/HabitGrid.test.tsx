@@ -76,7 +76,7 @@ const phone: HabitOverview = {
 };
 
 function renderGrid(overrides: Partial<Parameters<typeof HabitGrid>[0]> = {}) {
-  const handlers = { onToggle: vi.fn(), onTags: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn() };
+  const handlers = { onToggle: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn() };
   render(
     <HabitGrid
       habits={[stretch, read]}
@@ -251,62 +251,6 @@ describe('HabitGrid', () => {
     renderGrid({ habits: [{ ...read, completedDates: ['2026-10-06'] }] }); // a Tuesday
 
     expect(screen.getByRole('img', { name: 'Read, Tue 6 Oct: not scheduled' })).toBeInTheDocument();
-  });
-  describe('tags', () => {
-    const sick = { id: 't-sick', name: 'sick' };
-    const trip = { id: 't-trip', name: 'trip' };
-
-    it('has a dot for every day, named by what the day carries', () => {
-      renderGrid({
-        habits: [
-          {
-            ...stretch,
-            taggedDays: [{ date: '2026-10-05', tags: [sick, trip] }],
-          },
-        ],
-      });
-
-      const row = screen.getByRole('rowheader', { name: /^Stretch/ }).closest('tr') as HTMLElement;
-      expect(within(row).getAllByRole('button', { name: /^(Tags|Add tags), / })).toHaveLength(31);
-      expect(
-        within(row).getByRole('button', { name: 'Tags, Stretch, Mon 5 Oct: sick, trip' }),
-      ).toHaveAttribute('title', 'sick, trip');
-      expect(
-        within(row).getByRole('button', { name: 'Add tags, Stretch, Tue 6 Oct' }),
-      ).toBeInTheDocument();
-    });
-
-    it('opens the day of that habit, also one that cannot be ticked', async () => {
-      const { onTags, onToggle } = renderGrid();
-
-      // Read is not due on Tuesday 6 October: the cell is a picture, the dot still works.
-      await userEvent.click(screen.getByRole('button', { name: 'Add tags, Read, Tue 6 Oct' }));
-
-      expect(onTags).toHaveBeenCalledOnce();
-      expect(onTags).toHaveBeenCalledWith(expect.objectContaining({ id: 'h-2' }), '2026-10-06');
-      expect(onToggle).not.toHaveBeenCalled();
-    });
-
-    it('keeps the tick separate: a click on the cell does not open the tags', async () => {
-      const { onTags, onToggle } = renderGrid();
-
-      await userEvent.click(screen.getByRole('button', { name: 'Stretch, Wed 7 Oct' }));
-
-      expect(onToggle).toHaveBeenCalledOnce();
-      expect(onTags).not.toHaveBeenCalled();
-    });
-
-    it('shows each habit its own tags for the same day', () => {
-      renderGrid({
-        habits: [
-          { ...stretch, taggedDays: [{ date: '2026-10-05', tags: [sick] }] },
-          { ...read, taggedDays: [{ date: '2026-10-05', tags: [trip] }] },
-        ],
-      });
-
-      expect(screen.getByRole('button', { name: 'Tags, Stretch, Mon 5 Oct: sick' })).toBeVisible();
-      expect(screen.getByRole('button', { name: 'Tags, Read, Mon 5 Oct: trip' })).toBeVisible();
-    });
   });
 
   describe('a quota habit ("3 times a week")', () => {
