@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { countText, lastDoneText, lastDoneWhen, percentOf } from './figures';
+import {
+  countText,
+  lastDoneText,
+  lastDoneWhen,
+  lengthText,
+  percentOf,
+  streakText,
+} from './figures';
 
 describe('percentOf', () => {
   it.each([
@@ -67,5 +74,36 @@ describe('lastDoneWhen / lastDoneText', () => {
   it('makes a sentence of it', () => {
     expect(lastDoneText('2026-10-03', today)).toBe('Last done Sat 3 Oct · 8 days ago');
     expect(lastDoneText('2026-10-10', today)).toBe('Last done yesterday');
+  });
+});
+
+describe('lengthText', () => {
+  it.each([
+    ['days', 1, '1 day'],
+    ['days', 5, '5 days'],
+    ['weeks', 1, '1 week'],
+    ['weeks', 12, '12 weeks'],
+    ['months', 1, '1 month'],
+    ['months', 3, '3 months'],
+  ] as const)('%s, %i is "%s"', (unit, count, expected) => {
+    expect(lengthText(unit, count)).toBe(expected);
+  });
+});
+
+describe('streakText', () => {
+  it('names the streak and the longest one in the unit the habit is counted in', () => {
+    expect(streakText('days', 5, 12)).toBe('Streak 5 days · Longest 12 days');
+    expect(streakText('weeks', 1, 3)).toBe('Streak 1 week · Longest 3 weeks');
+    expect(streakText('months', 2, 2)).toBe('Streak 2 months · Longest 2 months');
+  });
+
+  it('says a broken streak is broken instead of "Streak 0 days"', () => {
+    expect(streakText('days', 0, 4)).toBe('No streak right now · Longest 4 days');
+    expect(streakText('weeks', 0, 1)).toBe('No streak right now · Longest 1 week');
+  });
+
+  it('says so when there never was one', () => {
+    expect(streakText('days', 0, 0)).toBe('No streak yet');
+    expect(streakText('weeks', 0, 0)).toBe('No streak yet');
   });
 });

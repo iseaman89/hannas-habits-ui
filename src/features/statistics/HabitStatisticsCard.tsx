@@ -1,6 +1,13 @@
 import { recurrenceText, scheduleLabel, type HabitStatistics } from '@/features/habits';
 import { Card } from '@/shared/ui';
-import { countText, lastDoneText, lastDoneWhen, percentOf, type CountingUnit } from './figures';
+import {
+  countText,
+  lastDoneText,
+  lastDoneWhen,
+  percentOf,
+  streakText,
+  type CountingUnit,
+} from './figures';
 import { ShareBar } from './ShareBar';
 
 /** "last done yesterday" / "never done" - the end of the line under a part's bar. */
@@ -40,6 +47,9 @@ export function HabitStatisticsCard({ habit, today }: { habit: HabitStatistics; 
         </div>
         <ShareBar done={habit.done} planned={habit.planned} />
         <p className="text-sm text-neutral-700">{lastDoneText(habit.lastDoneOn, today)}</p>
+        <p className="text-sm text-neutral-700">
+          {streakText(unit, habit.currentStreak, habit.longestStreak)}
+        </p>
 
         {habit.subHabits.length > 0 && (
           <div className="mt-2 border-t border-divider pt-4">
@@ -64,6 +74,9 @@ export function HabitStatisticsCard({ habit, today }: { habit: HabitStatistics; 
                   <p className="text-sm text-neutral-700">
                     {countText('days', part.done, part.planned)} ·{' '}
                     {partLastDone(part.lastDoneOn, today)}
+                  </p>
+                  <p className="text-sm text-neutral-700">
+                    {streakText('days', part.currentStreak, part.longestStreak)}
                   </p>
                 </li>
               ))}

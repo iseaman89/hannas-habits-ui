@@ -92,7 +92,8 @@ export function StatisticsPage({ gateway = habitsGateway }: { gateway?: HabitsGa
           ))}
         </ul>
         <p className="text-sm text-neutral-700">
-          Only days that are over are counted; today counts once it is done.
+          Only days that are over are counted; today counts once it is done. Streaks are as of
+          today, whatever month is shown.
           {habits.some((habit) => isQuota(habit.recurrence)) &&
             ' A week counts for the month it ends in, and one that is still running only when it has reached its number.'}
         </p>

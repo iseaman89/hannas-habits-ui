@@ -29,6 +29,23 @@ export function countText(unit: CountingUnit, done: number, planned: number): st
     : `Reached the goal in ${done} of ${planned} ${noun}`;
 }
 
+/** "1 day", "5 days", "1 week", "2 months" - a length in the unit it is counted in. */
+export function lengthText(unit: CountingUnit, count: number): string {
+  return `${count} ${count === 1 ? SINGULAR[unit] : unit}`;
+}
+
+/**
+ * The streak line: "Streak 5 days · Longest 12 days". Both are as of today and over the whole
+ * history, whatever month is shown. A streak that is broken says so instead of "Streak 0 days";
+ * a habit that never had one is "No streak yet".
+ */
+export function streakText(unit: CountingUnit, current: number, longest: number): string {
+  if (longest <= 0) return 'No streak yet';
+
+  const now = current > 0 ? `Streak ${lengthText(unit, current)}` : 'No streak right now';
+  return `${now} · Longest ${lengthText(unit, longest)}`;
+}
+
 /**
  * When it was last done, as the end of a sentence: "today", "yesterday", "Sat 3 Oct · 8 days ago"
  * (the year only when it is not this one). `null` when it never was. `today` is the client's local

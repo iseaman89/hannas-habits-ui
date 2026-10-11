@@ -132,6 +132,8 @@ describe('a habit', () => {
     expect(stretchCard.getByText('Done on 2 of 6 days')).toBeInTheDocument();
     expect(stretchCard.getByText('Every day')).toBeInTheDocument();
     expect(stretchCard.getByText('Last done yesterday')).toBeInTheDocument();
+    // Ticked on the 5th and 6th; today (the 7th) is open and no break.
+    expect(stretchCard.getByText('Streak 2 days · Longest 2 days')).toBeInTheDocument();
 
     // Mondays, Wednesdays, Fridays: Fri 2 and Mon 5 are judged, none done.
     const readCard = within(cardOf('Read'));
@@ -139,6 +141,29 @@ describe('a habit', () => {
     expect(readCard.getByText('Done on 0 of 2 days')).toBeInTheDocument();
     expect(readCard.getByText('Mon · Wed · Fri')).toBeInTheDocument();
     expect(readCard.getByText('Not done yet')).toBeInTheDocument();
+    expect(readCard.getByText('No streak yet')).toBeInTheDocument();
+  });
+
+  it('says a broken streak is broken, and keeps the record', async () => {
+    // Ticked the 1st to the 3rd, then nothing: the 4th to the 6th were missed.
+    renderPage(fakeHabits([{ ...stretch, completed: ['2026-10-01', '2026-10-02', '2026-10-03'] }]));
+    await screen.findByRole('heading', { level: 2, name: 'Stretch' });
+
+    expect(
+      within(cardOf('Stretch')).getByText('No streak right now · Longest 3 days'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the streaks as of today, whatever month is shown', async () => {
+    renderPage(fakeHabits([stretch]), '/statistics?month=2026-09');
+    await screen.findByRole('heading', { level: 2, name: 'Stretch' });
+
+    expect(
+      within(cardOf('Stretch')).getByText('Streak 2 days · Longest 2 days'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Streaks are as of today, whatever month is shown/),
+    ).toBeInTheDocument();
   });
 
   it('keeps the habits in the order the server sends them', async () => {
@@ -177,6 +202,8 @@ describe('a habit', () => {
     expect(card.getByText('100 %')).toBeInTheDocument();
     expect(card.getByText('Reached the goal in 1 of 1 week')).toBeInTheDocument();
     expect(card.getByText('Twice a week')).toBeInTheDocument();
+    // The week of 28 Sep is met; the running one (5-11 Oct) has one of two and is skipped.
+    expect(card.getByText('Streak 1 week · Longest 1 week')).toBeInTheDocument();
     expect(screen.getByText(/A week counts for the month it ends in/)).toBeInTheDocument();
   });
 
@@ -213,8 +240,10 @@ describe('the parts of a habit', () => {
     expect(parts[0]).toHaveTextContent('Mon');
     expect(parts[0]).toHaveTextContent('100 %');
     expect(parts[0]).toHaveTextContent('Done on 1 of 1 day · last done Mon 5 Oct · 2 days ago');
+    expect(parts[0]).toHaveTextContent('Streak 1 day · Longest 1 day');
     expect(parts[1]).toHaveTextContent('Arms');
     expect(parts[1]).toHaveTextContent('Nothing to judge yet · never done');
+    expect(parts[1]).toHaveTextContent('No streak yet');
   });
 
   it('counts the parts of a quota habit in days, whatever the habit itself is counted in', async () => {
@@ -232,6 +261,9 @@ describe('the parts of a habit', () => {
     const card = within(cardOf('Run'));
     expect(card.getByText(/^Reached the goal in 0 of 1 week$/)).toBeInTheDocument();
     expect(card.getByText(/^Done on 1 of 1 day · /)).toBeInTheDocument();
+    // The habit's own streak is in weeks, the part's in days (Mon 5 Oct; the Mondays before it were missed).
+    expect(card.getByText('No streak yet')).toBeInTheDocument();
+    expect(card.getByText('Streak 1 day · Longest 1 day')).toBeInTheDocument();
   });
 
   it('has no parts section for a habit without parts', async () => {
