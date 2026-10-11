@@ -1,5 +1,6 @@
 export { BrandMark } from './BrandMark';
 export { Button, IconButton } from './Button';
+export { buttonClassName } from './buttonStyles';
 export type { ButtonProps, ButtonSize, ButtonVariant, IconButtonProps } from './Button';
 export { Card } from './Card';
 export type { CardTone } from './Card';

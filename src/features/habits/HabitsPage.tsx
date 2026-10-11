@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { addMonths, format, isSameMonth, startOfMonth, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { ChartNoAxesColumn, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { errorMessage } from '@/shared/api';
 import { toApiDate } from '@/shared/lib/dates';
 import { useToday } from '@/shared/lib/useToday';
 import {
   Button,
+  buttonClassName,
   Card,
   FormMessage,
   IconButton,
@@ -149,6 +150,21 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
             >
               <ChevronRight />
             </IconButton>
+            {/* The same month, as numbers. A link (it opens another screen), icon only on a phone. */}
+            <Link
+              to={{
+                pathname: '/statistics',
+                search: isSameMonth(month, now) ? '' : `?month=${toMonthParam(month)}`,
+              }}
+              className={buttonClassName({
+                variant: 'secondary',
+                size: 'sm',
+                className: 'max-sm:size-9 max-sm:px-0',
+              })}
+            >
+              <ChartNoAxesColumn className="size-5" aria-hidden />
+              <span className="max-sm:sr-only">Statistics</span>
+            </Link>
             {/* On a phone just the plus: the header has room for little else beside the title. */}
             <Button
               className="max-sm:size-9 max-sm:px-0"

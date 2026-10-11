@@ -4,6 +4,7 @@ import { CalendarPage } from '@/features/calendar';
 import { DiaryPage, TodayRedirect } from '@/features/diary';
 import { HabitsPage } from '@/features/habits';
 import { ResolutionsPage } from '@/features/resolutions';
+import { StatisticsPage } from '@/features/statistics';
 import { AppShell } from './AppShell';
 import { NotFoundPage } from './NotFoundPage';
 import { RouteError } from './RouteError';
@@ -32,6 +33,7 @@ export const routes: RouteObject[] = [
               { path: '/', element: <TodayRedirect /> },
               { path: '/diary/:date', element: <DiaryPage /> },
               { path: '/habits', element: <HabitsPage /> },
+              { path: '/statistics', element: <StatisticsPage /> },
               { path: '/calendar', element: <CalendarPage /> },
               { path: '/resolutions', element: <ResolutionsPage /> },
               { path: '*', element: <NotFoundPage /> },

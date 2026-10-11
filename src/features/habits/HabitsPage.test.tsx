@@ -945,3 +945,23 @@ describe('a quota ("3 times a week")', () => {
     expect(await screen.findByText('4 times a week · 2 of 4 this week')).toBeInTheDocument();
   });
 });
+
+describe('the statistics link', () => {
+  it('opens the statistics of the month on screen', async () => {
+    renderPage(fakeHabits([stretch]));
+    await screen.findByRole('table');
+
+    // The current month keeps the address clean.
+    expect(screen.getByRole('link', { name: 'Statistics' })).toHaveAttribute('href', '/statistics');
+  });
+
+  it('carries another month along', async () => {
+    renderPage(fakeHabits([stretch]), '/habits?month=2026-09');
+    await screen.findByRole('table');
+
+    expect(screen.getByRole('link', { name: 'Statistics' })).toHaveAttribute(
+      'href',
+      '/statistics?month=2026-09',
+    );
+  });
+});
