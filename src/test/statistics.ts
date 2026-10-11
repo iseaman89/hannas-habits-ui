@@ -1,4 +1,6 @@
 import {
+  addMonths,
+  addWeeks,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
@@ -84,6 +86,81 @@ export function tallyPeriods(
   }
 
   return { planned, done };
+}
+
+/** The streak as of a day and the best one over the whole history. */
+export interface Streaks {
+  currentStreak: number;
+  longestStreak: number;
+}
+
+/**
+ * The runs in a row of judged units that were met, oldest first. The current one is counted back
+ * from the end; the newest unit is skipped - no break - when it is still running and not met yet
+ * (`skipOpenLast`). The longest is the best run anywhere.
+ */
+function streaksOf(met: readonly boolean[], skipOpenLast: boolean): Streaks {
+  let longestStreak = 0;
+  let run = 0;
+  for (const isMet of met) {
+    run = isMet ? run + 1 : 0;
+    longestStreak = Math.max(longestStreak, run);
+  }
+
+  const last = met.length - 1;
+  let index = skipOpenLast && last >= 0 && !met[last] ? last - 1 : last;
+  let currentStreak = 0;
+  while (index >= 0 && met[index]) {
+    currentStreak++;
+    index--;
+  }
+
+  return { currentStreak, longestStreak };
+}
+
+/**
+ * The stand-in for the backend's `HabitStreak.Current` / `Longest` of a rule with due days:
+ * `dueDays` are *all* due days from the start up to `asOf` (oldest first). A day that is not due
+ * neither counts nor breaks; an open `asOf` is skipped, not a break.
+ */
+export function streaksOfDays(
+  dueDays: readonly string[],
+  completed: ReadonlySet<string>,
+  asOf: string,
+): Streaks {
+  const met = dueDays.map((day) => completed.has(day));
+  return streaksOf(met, dueDays[dueDays.length - 1] === asOf);
+}
+
+/**
+ * The same for a quota, in weeks (Monday to Sunday) or calendar months: from the period of the
+ * start date to the one that contains `asOf`; a period counts the marks from the start date to
+ * `asOf` and is met at `times`. The running period that is not met yet is skipped, not a break.
+ */
+export function streaksOfPeriods(
+  rule: Recurrence,
+  startDate: string,
+  completed: ReadonlySet<string>,
+  asOf: string,
+): Streaks {
+  const times = rule.times ?? 1;
+  const week = rule.kind === 'timesPerWeek';
+  const met: boolean[] = [];
+  let cursor = week
+    ? startOfWeek(parseISO(startDate), { weekStartsOn: 1 })
+    : startOfMonth(parseISO(startDate));
+
+  while (toDay(cursor) <= asOf) {
+    const first = toDay(cursor);
+    const last = toDay(week ? endOfWeek(cursor, { weekStartsOn: 1 }) : endOfMonth(cursor));
+    const ticks = daysBetween(first, last < asOf ? last : asOf).filter(
+      (tick) => tick >= startDate && completed.has(tick),
+    ).length;
+    met.push(ticks >= times);
+    cursor = week ? addWeeks(cursor, 1) : addMonths(cursor, 1);
+  }
+
+  return streaksOf(met, true);
 }
 
 /** The latest completed day on or before `asOf`, or `null`. */

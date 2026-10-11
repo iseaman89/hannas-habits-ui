@@ -148,9 +148,158 @@ describe('fakeHabits().gateway.statistics', () => {
 
     // Legs on Mondays: 5 and 12 (the Tuesday tick is not due). Arms on Thursdays: 1 and 8.
     expect(stats?.subHabits).toEqual([
-      { id: 'legs', title: 'Legs', weekdays: [1], planned: 2, done: 1, lastDoneOn: '2026-10-06' },
-      { id: 'arms', title: 'Arms', weekdays: [4], planned: 2, done: 0, lastDoneOn: null },
+      {
+        id: 'legs',
+        title: 'Legs',
+        weekdays: [1],
+        planned: 2,
+        done: 1,
+        lastDoneOn: '2026-10-06',
+        currentStreak: 0, // Monday 12 was due and missed
+        longestStreak: 1, // Monday 5; the Tuesday tick is not a due day
+      },
+      {
+        id: 'arms',
+        title: 'Arms',
+        weekdays: [4],
+        planned: 2,
+        done: 0,
+        lastDoneOn: null,
+        currentStreak: 0,
+        longestStreak: 0,
+      },
     ]);
+  });
+
+  describe('the streaks', () => {
+    // The same cases as the backend's HabitStreak tests: that rule is the reference.
+    const streaksOf = async (habit: FakeHabit, asOf: string, range = OCTOBER) => {
+      const stats = await statisticsOf(habit, asOf, range);
+      return [stats.currentStreak, stats.longestStreak];
+    };
+
+    it('counts the due days in a row back from the day, and the best run of the whole history', async () => {
+      // Thu 1, Mon 5, Thu 8 done (three in a row), Mon 12 missed, Thu 15 done.
+      const habit = gym({ completed: ['2026-10-01', '2026-10-05', '2026-10-08', '2026-10-15'] });
+
+      expect(await streaksOf(habit, '2026-10-15')).toEqual([1, 3]);
+    });
+
+    it('does not depend on the range', async () => {
+      const habit = gym({ completed: ['2026-10-01', '2026-10-05', '2026-10-08', '2026-10-15'] });
+
+      expect(
+        await streaksOf(habit, '2026-10-15', { from: '2026-01-01', to: '2026-01-31' }),
+      ).toEqual([1, 3]);
+    });
+
+    it('skips a due day that is still open today, it is no break', async () => {
+      expect(
+        await streaksOf(gym({ completed: ['2026-10-01', '2026-10-05'] }), '2026-10-08'),
+      ).toEqual([2, 2]);
+    });
+
+    it('lets a day that was not due neither count nor break', async () => {
+      // Tuesday 6th is not a Monday/Thursday: the tick is ignored, the run is Thu 1 + Mon 5.
+      const habit = gym({ completed: ['2026-10-01', '2026-10-05', '2026-10-06'] });
+
+      expect(await streaksOf(habit, '2026-10-07')).toEqual([2, 2]);
+    });
+
+    it('ignores a record after today and the days before the start', async () => {
+      const habit = gym({
+        startDate: '2026-10-05',
+        completed: ['2026-10-01', '2026-10-05', '2026-10-12'],
+      });
+
+      // Mon 5 is the first due day and done; Thu 8 is due and still open (skipped). The tick on Thu 1 lies
+      // before the start and the one on Mon 12 after "today".
+      expect(await streaksOf(habit, '2026-10-08')).toEqual([1, 1]);
+    });
+
+    it('counts a quota in weeks, skipping the running week that has not reached its number', async () => {
+      const run: FakeHabit = {
+        id: 'run',
+        title: 'Run',
+        recurrence: recurrenceOf({ kind: 'timesPerWeek', times: 2 }, '2026-09-01'),
+        startDate: '2026-09-01',
+        completed: [
+          // three met weeks in September ...
+          '2026-09-01',
+          '2026-09-02',
+          '2026-09-08',
+          '2026-09-09',
+          '2026-09-15',
+          '2026-09-16',
+          // ... a week without, then the weeks of 28 Sep and 5 Oct; the running week has one
+          '2026-09-29',
+          '2026-10-01',
+          '2026-10-06',
+          '2026-10-08',
+          '2026-10-13',
+        ],
+      };
+
+      expect(await streaksOf(run, '2026-10-15')).toEqual([2, 3]);
+    });
+
+    it('counts only the marks from the start date towards the first week of a quota', async () => {
+      const run = (completed: string[]): FakeHabit => ({
+        id: 'run',
+        title: 'Run',
+        recurrence: recurrenceOf({ kind: 'timesPerWeek', times: 3 }, '2026-10-07'),
+        startDate: '2026-10-07', // a Wednesday
+        completed,
+      });
+
+      // Monday and Tuesday lie before the start: only the Wednesday counts. Wed, Thu, Fri are enough.
+      expect(
+        await streaksOf(run(['2026-10-05', '2026-10-06', '2026-10-07']), '2026-10-09'),
+      ).toEqual([0, 0]);
+      expect(
+        await streaksOf(run(['2026-10-07', '2026-10-08', '2026-10-09']), '2026-10-09'),
+      ).toEqual([1, 1]);
+    });
+
+    it('counts a monthly quota in months', async () => {
+      const swim = (completed: string[]): FakeHabit => ({
+        id: 'swim',
+        title: 'Swim',
+        recurrence: recurrenceOf({ kind: 'timesPerMonth', times: 2 }, '2026-07-01'),
+        startDate: '2026-07-01',
+        completed,
+      });
+      const base = ['2026-08-01', '2026-08-02', '2026-09-05', '2026-10-02', '2026-10-03'];
+
+      // September fell short: August and October are two runs of one.
+      expect(await streaksOf(swim(base), '2026-10-08')).toEqual([1, 1]);
+      expect(await streaksOf(swim([...base, '2026-09-20']), '2026-10-08')).toEqual([3, 3]);
+    });
+
+    it('counts a part on its own days, in days, also under a quota habit', async () => {
+      const run: FakeHabit = {
+        id: 'run',
+        title: 'Run',
+        recurrence: recurrenceOf({ kind: 'timesPerWeek', times: 3 }, '2026-09-01'),
+        startDate: '2026-09-01',
+        completed: [],
+        subHabits: [
+          { id: 'long', title: 'Long', weekdays: [1], completed: ['2026-09-28', '2026-10-05'] },
+        ],
+      };
+      const [stats] = await fakeHabits([run]).gateway.statistics({
+        ...OCTOBER,
+        asOf: '2026-10-07',
+      });
+
+      // Mondays 28 Sep and 5 Oct - the Mondays before them were missed.
+      expect(stats?.subHabits[0]).toMatchObject({ currentStreak: 2, longestStreak: 2 });
+    });
+
+    it('is zero for a habit that was never done, and before the start', async () => {
+      expect(await streaksOf(gym(), '2026-10-31')).toEqual([0, 0]);
+      expect(await streaksOf(gym({ startDate: '2026-11-01' }), '2026-10-31')).toEqual([0, 0]);
+    });
   });
 
   it('writes the call down', async () => {
