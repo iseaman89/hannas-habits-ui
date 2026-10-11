@@ -15,7 +15,7 @@ import { PartsButton } from './PartsButton';
 import { StreakBadge } from './StreakBadge';
 import { isQuota, quotaProgressText, streakUnit } from './quota';
 import { recurrenceText } from './recurrence';
-import { noteOn, partsLabel, partsOnDay, subHabitProgress, type SubHabit } from './subHabits';
+import { notedPartsOnDay, noteOn, partsLabel, subHabitProgress, type SubHabit } from './subHabits';
 import { dayName, scheduleLabel, type DayOfWeek } from './weekdays';
 
 interface HabitGridProps {
@@ -269,19 +269,19 @@ function HabitRow({
           const label = `${habit.title}, ${format(date, 'EEE d MMM')}`;
           // Open, the parts have rows of their own: the summary under the cell would say it twice.
           const progress = open ? null : subHabitProgress(habit, key);
-          // The parts of the day by name, each with its note: what hovering the cell shows.
-          const dayParts = partsOnDay(habit, key);
-          const noted = dayParts.some(({ note }) => note !== undefined);
+          // The parts that have a note that day, with it: what hovering the cell shows - and
+          // nothing at all, no card, for a day without one.
+          const notedParts = notedPartsOnDay(habit, key);
           return (
             <td key={key} className="px-0.5 py-2 text-center align-top">
               <HoverCard
                 label={`Parts, ${label}`}
                 card={
-                  dayParts.length > 0 ? (
+                  notedParts.length > 0 ? (
                     <DayNotesTip
                       title={habit.title}
                       dayLabel={format(date, 'EEE d MMM')}
-                      parts={dayParts}
+                      parts={notedParts}
                     />
                   ) : null
                 }
@@ -289,7 +289,7 @@ function HabitRow({
                 <DayCell
                   state={state}
                   label={label}
-                  note={noted ? noteText(dayParts) : undefined}
+                  note={notedParts.length > 0 ? noteText(notedParts) : undefined}
                   onToggle={() => onToggle(habit, key, !isDone)}
                 />
                 {progress && (
@@ -324,11 +324,8 @@ function HabitRow({
 }
 
 /** The notes of a day's parts as one sentence for a screen reader: "Legs: 3 x 10. Arms: sore". */
-function noteText(parts: readonly { part: SubHabit; note: string | undefined }[]): string {
-  return parts
-    .filter(({ note }) => note !== undefined)
-    .map(({ part, note }) => `${part.title}: ${note}`)
-    .join('. ');
+function noteText(parts: readonly { part: SubHabit; note: string }[]): string {
+  return parts.map(({ part, note }) => `${part.title}: ${note}`).join('. ');
 }
 
 interface PartRowProps {

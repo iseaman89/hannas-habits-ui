@@ -518,9 +518,10 @@ describe('HabitGrid', () => {
       screen.getByRole('rowheader', { name: new RegExp(`^${title}`) }).closest('tr') as HTMLElement;
 
     describe('on the habit’s own cell', () => {
-      it('names the day’s parts and writes the note of each under its name', async () => {
+      it('names the parts that have a note that day and writes the note under each name', async () => {
         const user = userEvent.setup();
-        renderGrid({ habits: [sport] });
+        const notedArms = { ...arms, notes: [{ date: '2026-10-05', text: 'bench 3 x 8' }] };
+        renderGrid({ habits: [{ ...sport, subHabits: [legs, notedArms] }] });
 
         await user.hover(within(rowOfRead()).getByRole('button', { name: /^Read, Mon 5 Oct/ }));
 
@@ -530,19 +531,30 @@ describe('HabitGrid', () => {
         expect(parts[0]).toHaveTextContent('Legs');
         expect(parts[0]).toHaveTextContent(/3 x 10\s*left knee odd/);
         expect(parts[1]).toHaveTextContent('Arms');
-        expect(parts[1]).toHaveTextContent(/^Arms$/); // no note: the name only
+        expect(parts[1]).toHaveTextContent('bench 3 x 8');
       });
 
-      it('lists only the parts that are due on that day', async () => {
+      it('leaves a part without a note out of the card', async () => {
+        const user = userEvent.setup();
+        renderGrid({ habits: [sport] }); // Monday: legs has a note, arms is due without one
+
+        await user.hover(within(rowOfRead()).getByRole('button', { name: /^Read, Mon 5 Oct/ }));
+
+        const card = await screen.findByRole('group', { name: 'Parts, Read, Mon 5 Oct' });
+        expect(within(card).getAllByRole('listitem')).toHaveLength(1);
+        expect(card).toHaveTextContent('Legs');
+        expect(card).not.toHaveTextContent('Arms');
+      });
+
+      it('shows no card at all on a day whose parts have no note', async () => {
         const user = userEvent.setup();
         renderGrid({ habits: [sport] });
 
+        // Wednesday 7 October: arms is due, nobody wrote on it.
         await user.hover(within(rowOfRead()).getByRole('button', { name: 'Read, Wed 7 Oct' }));
+        await new Promise((resolve) => setTimeout(resolve, 450));
 
-        const card = await screen.findByRole('group', { name: 'Parts, Read, Wed 7 Oct' });
-        expect(within(card).getAllByRole('listitem')).toHaveLength(1);
-        expect(card).toHaveTextContent('Arms');
-        expect(card).not.toHaveTextContent('Legs');
+        expect(screen.queryByRole('group')).not.toBeInTheDocument();
       });
 
       it('shows no card on a day without parts, nor on a habit without any', async () => {

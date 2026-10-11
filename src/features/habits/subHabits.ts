@@ -57,17 +57,18 @@ export function noteOn(part: Pick<SubHabit, 'notes'>, date: string): string | un
 }
 
 /**
- * The parts that have something to say about the day: the ones that are due and the ones that
- * carry a note (a note is independent of the plan, so a part that is not due can have one).
- * In the order the parts were added.
+ * The parts that have a note on the day, with it, in the order the parts were added. A part
+ * without a note says nothing - the habit's cell shows no card for a day nobody wrote on. A note
+ * is independent of the plan, so the part need not be due that day.
  */
-export function partsOnDay(
+export function notedPartsOnDay(
   habit: { subHabits: readonly SubHabit[] },
   date: string,
-): { part: SubHabit; note: string | undefined }[] {
-  return habit.subHabits
-    .map((part) => ({ part, note: noteOn(part, date) }))
-    .filter(({ part, note }) => note !== undefined || part.scheduledDates.includes(date));
+): { part: SubHabit; note: string }[] {
+  return habit.subHabits.flatMap((part) => {
+    const note = noteOn(part, date);
+    return note === undefined ? [] : [{ part, note }];
+  });
 }
 
 /** "1 part", "3 parts". */

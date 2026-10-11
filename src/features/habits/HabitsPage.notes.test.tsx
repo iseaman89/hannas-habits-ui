@@ -224,7 +224,7 @@ describe('notes on the parts of a habit', () => {
     ]);
   });
 
-  it('lists the day’s parts by name on the habit’s cell even where no note was written', async () => {
+  it('lists on the habit’s cell the parts that have a note that day, with it', async () => {
     const user = userEvent.setup();
     renderPage(fakeHabits([sport()]));
     await screen.findByRole('table');
@@ -232,7 +232,38 @@ describe('notes on the parts of a habit', () => {
     await user.hover(within(rowOf('Sport')).getByRole('button', { name: /^Sport, Mon 5 Oct/ }));
 
     const card = await screen.findByRole('group', { name: 'Parts, Sport, Mon 5 Oct' });
-    const parts = within(card).getAllByRole('listitem');
-    expect(parts.map((part) => part.textContent)).toEqual(['Legs3 x 10, left knee odd', 'Arms']);
+    // Arms is due that day as well, but has no note: it is not named.
+    expect(
+      within(card)
+        .getAllByRole('listitem')
+        .map((part) => part.textContent),
+    ).toEqual(['Legs3 x 10, left knee odd']);
+  });
+
+  it('shows no card on the habit’s cell on a day whose parts have no note', async () => {
+    const user = userEvent.setup();
+    renderPage(fakeHabits([sport()]));
+    await screen.findByRole('table');
+
+    await user.hover(within(rowOf('Sport')).getByRole('button', { name: 'Sport, Wed 7 Oct' }));
+    await new Promise((resolve) => setTimeout(resolve, 450));
+
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+  });
+
+  it('shows the card once a note was written, and not before', async () => {
+    const user = userEvent.setup();
+    renderPage(fakeHabits([sport()]));
+    await openParts(user);
+
+    const field = await openNote(user, 'Arms', 'Wed 7 Oct', 'Note for Arms, Wed 7 Oct');
+    await user.type(field, 'felt heavy');
+    await user.tab();
+    await user.unhover(screen.getByRole('textbox', { name: 'Note for Arms, Wed 7 Oct' }));
+    await user.hover(within(rowOf('Sport')).getByRole('button', { name: /^Sport, Wed 7 Oct/ }));
+
+    const card = await screen.findByRole('group', { name: 'Parts, Sport, Wed 7 Oct' });
+    expect(card).toHaveTextContent('Arms');
+    expect(card).toHaveTextContent('felt heavy');
   });
 });
