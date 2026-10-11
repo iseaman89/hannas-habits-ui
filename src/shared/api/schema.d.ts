@@ -2410,6 +2410,10 @@ export interface components {
             done: number;
             /** Format: date */
             lastDoneOn: string | null;
+            /** Format: int32 */
+            currentStreak: number;
+            /** Format: int32 */
+            longestStreak: number;
             subHabits: components["schemas"]["SubHabitStatisticsDto"][];
         };
         IdentityUserDto: {
@@ -2547,6 +2551,10 @@ export interface components {
             done: number;
             /** Format: date */
             lastDoneOn: string | null;
+            /** Format: int32 */
+            currentStreak: number;
+            /** Format: int32 */
+            longestStreak: number;
         };
         TagDto: {
             /** Format: uuid */
