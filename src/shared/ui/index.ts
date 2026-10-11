@@ -9,6 +9,7 @@ export { Dialog } from './Dialog';
 export { Field } from './Field';
 export type { FieldControlProps } from './Field';
 export { FormMessage } from './FormMessage';
+export { HoverCard } from './HoverCard';
 export { Input } from './Input';
 export type { InputProps } from './Input';
 export { PageHeader } from './PageHeader';

@@ -80,6 +80,7 @@ function renderGrid(overrides: Partial<Parameters<typeof HabitGrid>[0]> = {}) {
     onToggleExpanded: vi.fn(),
     onToggle: vi.fn(),
     onTogglePart: vi.fn(),
+    onNote: vi.fn(),
     onDayParts: vi.fn(),
     onParts: vi.fn(),
     onEdit: vi.fn(),
@@ -270,6 +271,7 @@ describe('HabitGrid', () => {
       weekdays: [1 as const],
       scheduledDates: ['2026-10-05', '2026-10-12'],
       completedDates: ['2026-10-05'],
+      notes: [],
     };
     const arms = {
       id: 's-arms',
@@ -277,6 +279,7 @@ describe('HabitGrid', () => {
       weekdays: [1 as const, 3 as const],
       scheduledDates: ['2026-10-05', '2026-10-07', '2026-10-12'],
       completedDates: [],
+      notes: [],
     };
     const withParts: HabitOverview = { ...read, subHabits: [legs, arms] };
     const rowOfRead = () =>
@@ -485,6 +488,203 @@ describe('HabitGrid', () => {
       renderGrid({ habits: [stretch] });
 
       expect(screen.getByRole('img', { name: 'Current streak: 4' })).toHaveTextContent(/^4$/);
+    });
+  });
+
+  describe('notes on the parts’ days', () => {
+    // Mon, Wed, Fri habit; legs on Mondays with a note on Monday 5 October, arms on Mondays and
+    // Wednesdays without any.
+    const legs = {
+      id: 's-legs',
+      title: 'Legs',
+      weekdays: [1 as const],
+      scheduledDates: ['2026-10-05', '2026-10-12'],
+      completedDates: ['2026-10-05'],
+      notes: [{ date: '2026-10-05', text: '3 x 10\nleft knee odd' }],
+    };
+    const arms = {
+      id: 's-arms',
+      title: 'Arms',
+      weekdays: [1 as const, 3 as const],
+      scheduledDates: ['2026-10-05', '2026-10-07', '2026-10-12'],
+      completedDates: [],
+      notes: [],
+    };
+    const sport: HabitOverview = { ...read, subHabits: [legs, arms] };
+    const open = new Set(['h-2']);
+    const rowOfRead = () =>
+      screen.getByRole('rowheader', { name: /^Read/ }).closest('tr') as HTMLElement;
+    const rowOfPart = (title: string) =>
+      screen.getByRole('rowheader', { name: new RegExp(`^${title}`) }).closest('tr') as HTMLElement;
+
+    describe('on the habit’s own cell', () => {
+      it('names the day’s parts and writes the note of each under its name', async () => {
+        const user = userEvent.setup();
+        renderGrid({ habits: [sport] });
+
+        await user.hover(within(rowOfRead()).getByRole('button', { name: /^Read, Mon 5 Oct/ }));
+
+        const card = await screen.findByRole('group', { name: 'Parts, Read, Mon 5 Oct' });
+        const parts = within(card).getAllByRole('listitem');
+        expect(parts).toHaveLength(2);
+        expect(parts[0]).toHaveTextContent('Legs');
+        expect(parts[0]).toHaveTextContent(/3 x 10\s*left knee odd/);
+        expect(parts[1]).toHaveTextContent('Arms');
+        expect(parts[1]).toHaveTextContent(/^Arms$/); // no note: the name only
+      });
+
+      it('lists only the parts that are due on that day', async () => {
+        const user = userEvent.setup();
+        renderGrid({ habits: [sport] });
+
+        await user.hover(within(rowOfRead()).getByRole('button', { name: 'Read, Wed 7 Oct' }));
+
+        const card = await screen.findByRole('group', { name: 'Parts, Read, Wed 7 Oct' });
+        expect(within(card).getAllByRole('listitem')).toHaveLength(1);
+        expect(card).toHaveTextContent('Arms');
+        expect(card).not.toHaveTextContent('Legs');
+      });
+
+      it('shows no card on a day without parts, nor on a habit without any', async () => {
+        const user = userEvent.setup();
+        renderGrid({ habits: [sport, stretch] });
+
+        // Friday 9 October is a day to come: a picture, not a button.
+        await user.hover(
+          within(rowOfRead()).getByRole('img', { name: 'Read, Fri 9 Oct: upcoming' }),
+        );
+        await user.hover(screen.getByRole('button', { name: 'Stretch, Mon 5 Oct' }));
+        await new Promise((resolve) => setTimeout(resolve, 450));
+
+        expect(screen.queryByRole('group')).not.toBeInTheDocument();
+      });
+
+      it('also shows a note on a day the part is not due on', async () => {
+        const user = userEvent.setup();
+        const stray = { ...arms, notes: [{ date: '2026-10-09', text: 'stretched instead' }] };
+        renderGrid({ habits: [{ ...sport, subHabits: [legs, stray] }] });
+
+        await user.hover(
+          within(rowOfRead()).getByRole('img', { name: /^Read, Fri 9 Oct: upcoming/ }),
+        );
+
+        const card = await screen.findByRole('group', { name: 'Parts, Read, Fri 9 Oct' });
+        expect(card).toHaveTextContent('Arms');
+        expect(card).toHaveTextContent('stretched instead');
+      });
+
+      it('lets a screen reader hear the notes of the day after the cell’s name', () => {
+        renderGrid({ habits: [sport] });
+
+        expect(
+          within(rowOfRead()).getByRole('button', {
+            name: 'Read, Mon 5 Oct. Note: Legs: 3 x 10\nleft knee odd',
+          }),
+        ).toBeInTheDocument();
+        // A day without a note keeps its plain name.
+        expect(
+          within(rowOfRead()).getByRole('button', { name: 'Read, Wed 7 Oct' }),
+        ).toBeInTheDocument();
+      });
+    });
+
+    describe('on a part’s own cell', () => {
+      it('opens a field with the note of the day, named by part and day', async () => {
+        const user = userEvent.setup();
+        renderGrid({ habits: [sport], expandedHabitIds: open });
+
+        await user.hover(
+          within(rowOfPart('Legs')).getByRole('button', { name: /^Read: Legs, Mon 5 Oct/ }),
+        );
+
+        const field = await screen.findByRole('textbox', { name: 'Note for Legs, Mon 5 Oct' });
+        expect(field).toHaveValue('3 x 10\nleft knee odd');
+      });
+
+      it('writes the trimmed text when the field is left, and only then and for the change', async () => {
+        const user = userEvent.setup();
+        const { onNote } = renderGrid({ habits: [sport], expandedHabitIds: open });
+
+        await user.hover(
+          within(rowOfPart('Arms')).getByRole('button', { name: /^Read: Arms, Mon 5 Oct/ }),
+        );
+        const field = await screen.findByRole('textbox', { name: 'Note for Arms, Mon 5 Oct' });
+        await user.type(field, '  bench 3 x 8 ');
+        expect(onNote).not.toHaveBeenCalled(); // still typing
+
+        await user.tab();
+
+        expect(onNote).toHaveBeenCalledTimes(1);
+        expect(onNote).toHaveBeenCalledWith(sport, arms, '2026-10-05', 'bench 3 x 8');
+      });
+
+      it('takes the note away when the field is emptied', async () => {
+        const user = userEvent.setup();
+        const { onNote } = renderGrid({ habits: [sport], expandedHabitIds: open });
+
+        await user.hover(
+          within(rowOfPart('Legs')).getByRole('button', { name: /^Read: Legs, Mon 5 Oct/ }),
+        );
+        await user.clear(await screen.findByRole('textbox', { name: 'Note for Legs, Mon 5 Oct' }));
+        await user.tab();
+
+        expect(onNote).toHaveBeenCalledWith(sport, legs, '2026-10-05', null);
+      });
+
+      it('has no field on a day that is not the part’s and has no note', async () => {
+        const user = userEvent.setup();
+        renderGrid({ habits: [sport], expandedHabitIds: open });
+
+        // Legs is a Monday part: Wednesday is a dot.
+        await user.hover(
+          within(rowOfPart('Legs')).getByRole('img', { name: /Wed 7 Oct: not scheduled/ }),
+        );
+        await new Promise((resolve) => setTimeout(resolve, 450));
+
+        expect(screen.queryByRole('group')).not.toBeInTheDocument();
+      });
+
+      it('has a field on a day that is not the part’s but carries a note, so it can be read and changed', async () => {
+        const user = userEvent.setup();
+        const stray = { ...legs, notes: [{ date: '2026-10-07', text: 'went anyway' }] };
+        renderGrid({ habits: [{ ...sport, subHabits: [stray, arms] }], expandedHabitIds: open });
+
+        await user.hover(
+          within(rowOfPart('Legs')).getByRole('img', {
+            name: /Wed 7 Oct: not scheduled\. Note: went anyway/,
+          }),
+        );
+
+        expect(
+          await screen.findByRole('textbox', { name: 'Note for Legs, Wed 7 Oct' }),
+        ).toHaveValue('went anyway');
+      });
+
+      it('has no field on a day before the habit started', async () => {
+        const user = userEvent.setup();
+        const late = { ...sport, startDate: '2026-10-06' };
+        renderGrid({ habits: [late], expandedHabitIds: open });
+
+        await user.hover(
+          within(rowOfPart('Legs')).getByRole('img', {
+            name: /Mon 5 Oct: before the habit started/,
+          }),
+        );
+        await new Promise((resolve) => setTimeout(resolve, 450));
+
+        expect(screen.queryByRole('group')).not.toBeInTheDocument();
+      });
+
+      it('still ticks the part with a click, the note does not take the cell over', async () => {
+        const user = userEvent.setup();
+        const { onTogglePart } = renderGrid({ habits: [sport], expandedHabitIds: open });
+
+        await user.click(
+          within(rowOfPart('Arms')).getByRole('button', { name: /^Read: Arms, Mon 5 Oct/ }),
+        );
+
+        expect(onTogglePart).toHaveBeenCalledWith(sport, arms, '2026-10-05', true);
+      });
     });
   });
 });

@@ -43,17 +43,40 @@ interface DayCellProps {
   /** Names the day for a screen reader, e.g. "Stretch, Wed 7 Oct". */
   label: string;
   onToggle: () => void;
+  /**
+   * The day has a note: a dot on the cell says so (the note itself is in the card beside it), and
+   * a screen reader hears this text after the name. Several notes are joined by the caller.
+   */
+  note?: string;
+}
+
+/** The mark of "there is a note": small, in the corner, apart from the cell's face by a ring. */
+function NoteDot() {
+  return (
+    <span
+      aria-hidden
+      className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-neutral-800 ring-2 ring-surface"
+    />
+  );
 }
 
 /**
  * One day of one habit. A day that can be ticked is a real toggle button (`aria-pressed` says
  * "done"); every other day is a picture with a text, never a dead button.
  */
-export function DayCell({ state, label, onToggle }: DayCellProps) {
+export function DayCell({ state, label, onToggle, note }: DayCellProps) {
+  const noted = note !== undefined;
+  const noteText = noted ? `. Note: ${note}` : '';
+
   if (!isToggleable(state)) {
     return (
-      <span role="img" aria-label={`${label}: ${stateText[state]}`} className="inline-grid">
+      <span
+        role="img"
+        aria-label={`${label}: ${stateText[state]}${noteText}`}
+        className="relative inline-grid"
+      >
         <CellFace state={state} />
+        {noted && <NoteDot />}
       </span>
     );
   }
@@ -62,11 +85,12 @@ export function DayCell({ state, label, onToggle }: DayCellProps) {
     <button
       type="button"
       aria-pressed={state === 'done'}
-      aria-label={label}
+      aria-label={`${label}${noteText}`}
       onClick={onToggle}
-      className="group inline-grid cursor-pointer rounded-full"
+      className="group relative inline-grid cursor-pointer rounded-full"
     >
       <CellFace state={state} className="group-hover:brightness-90" />
+      {noted && <NoteDot />}
     </button>
   );
 }

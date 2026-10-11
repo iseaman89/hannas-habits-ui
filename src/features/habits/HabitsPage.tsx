@@ -22,7 +22,7 @@ import { EditHabitDialog } from './EditHabitDialog';
 import { GridLegend } from './GridLegend';
 import { isQuota } from './quota';
 import { HabitGrid } from './HabitGrid';
-import { useMarkHabit, useMarkSubHabit } from './habitMutations';
+import { useMarkHabit, useMarkSubHabit, useSaveSubHabitNote } from './habitMutations';
 import { useHabitOverview } from './habitQueries';
 import { habitsGateway, type HabitsGateway } from './habitsGateway';
 import { SubHabitsDialog } from './SubHabitsDialog';
@@ -55,6 +55,7 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
   const overview = useHabitOverview(gateway, { ...monthRange(month), asOf: today });
   const mark = useMarkHabit(gateway);
   const markPart = useMarkSubHabit(gateway);
+  const saveNote = useSaveSubHabitNote(gateway);
 
   function toggleExpanded(habitId: string) {
     setExpandedIds((current) => {
@@ -124,6 +125,9 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
           onToggle={(habit, date, done) => mark.mutate({ habitId: habit.id, date, done })}
           onTogglePart={(habit, part, date, done) =>
             markPart.mutate({ habitId: habit.id, subHabitId: part.id, date, done })
+          }
+          onNote={(habit, part, date, text) =>
+            saveNote.mutate({ habitId: habit.id, subHabitId: part.id, date, text })
           }
           onDayParts={(habit, date) => setDialog({ kind: 'day-parts', habitId: habit.id, date })}
           onParts={(habit) => setDialog({ kind: 'parts', habitId: habit.id })}

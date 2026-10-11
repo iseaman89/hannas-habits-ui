@@ -47,6 +47,7 @@ describe('fake habits: parts', () => {
         weekdays: [1],
         scheduledDates: ['2026-10-05'],
         completedDates: ['2026-10-05'],
+        notes: [],
       },
       {
         id: 'arms',
@@ -55,6 +56,7 @@ describe('fake habits: parts', () => {
         // Saturday is the part's day, but not one of the habit's: never due.
         scheduledDates: ['2026-10-05', '2026-10-07'],
         completedDates: [],
+        notes: [],
       },
     ]);
   });
@@ -251,5 +253,113 @@ describe('fake habits: parts', () => {
       'mark-part sport legs 2026-10-05',
       'unmark sport 2026-10-05',
     ]);
+  });
+
+  describe('notes', () => {
+    const legsHabit = () =>
+      fakeHabits([
+        sport({
+          subHabits: [
+            { id: 'legs', title: 'Legs', weekdays: [1], notes: { '2026-10-05': 'knee odd' } },
+            { id: 'arms', title: 'Arms', weekdays: [3] },
+          ],
+        }),
+      ]);
+
+    it('carries the notes of the range on their part, oldest first, and leaves the others out', async () => {
+      const habits = fakeHabits([
+        sport({
+          subHabits: [
+            {
+              id: 'legs',
+              title: 'Legs',
+              weekdays: [1],
+              notes: { '2026-10-12': 'next week', '2026-10-05': 'first', '2026-09-28': 'before' },
+            },
+          ],
+        }),
+      ]);
+
+      const [overview] = await habits.gateway.overview({ ...range, to: '2026-10-31' });
+
+      expect(overview?.subHabits[0]?.notes).toEqual([
+        { date: '2026-10-05', text: 'first' },
+        { date: '2026-10-12', text: 'next week' },
+      ]);
+    });
+
+    it('writes a note trimmed, replaces the text of the day and answers with it', async () => {
+      const habits = legsHabit();
+
+      const answer = await habits.gateway.setSubHabitNote(
+        'sport',
+        'legs',
+        '2026-10-05',
+        '  3 x 10 ',
+      );
+
+      expect(answer).toEqual({ date: '2026-10-05', text: '3 x 10' });
+      expect(habits.notesOf('sport', 'legs')).toEqual([{ date: '2026-10-05', text: '3 x 10' }]);
+    });
+
+    it('takes a note away, and does not mind a day without one or a part that is gone', async () => {
+      const habits = legsHabit();
+
+      await habits.gateway.clearSubHabitNote('sport', 'legs', '2026-10-05');
+      await habits.gateway.clearSubHabitNote('sport', 'legs', '2026-10-05');
+      await habits.gateway.clearSubHabitNote('sport', 'gone', '2026-10-05');
+
+      expect(habits.notesOf('sport', 'legs')).toEqual([]);
+    });
+
+    it('refuses a blank or too long text with a 400 on `text`, and a part that is not there with 404', async () => {
+      const habits = legsHabit();
+
+      const blank = await refusal(
+        habits.gateway.setSubHabitNote('sport', 'legs', '2026-10-05', '  '),
+      );
+      const long = await refusal(
+        habits.gateway.setSubHabitNote('sport', 'legs', '2026-10-06', 'a'.repeat(501)),
+      );
+      const gone = await refusal(
+        habits.gateway.setSubHabitNote('sport', 'gone', '2026-10-05', 'x'),
+      );
+
+      expect(blank).toMatchObject({ status: 400 });
+      expect(Object.keys(blank.fieldErrors)).toEqual(['text']);
+      expect(long).toMatchObject({ status: 400 });
+      expect(Object.keys(long.fieldErrors)).toEqual(['text']);
+      expect(gone).toMatchObject({ status: 404 });
+      expect(habits.notesOf('sport', 'legs')).toEqual([{ date: '2026-10-05', text: 'knee odd' }]);
+    });
+
+    it('is independent of the ticks: a tick and its taking back leave the note', async () => {
+      const habits = legsHabit();
+
+      await habits.gateway.markSubHabit('sport', 'legs', '2026-10-05');
+      await habits.gateway.unmark('sport', '2026-10-05');
+
+      expect(habits.notesOf('sport', 'legs')).toEqual([{ date: '2026-10-05', text: 'knee odd' }]);
+    });
+
+    it('goes with the part', async () => {
+      const habits = legsHabit();
+
+      await habits.gateway.removeSubHabit('sport', 'legs');
+
+      expect(habits.notesOf('sport', 'legs')).toEqual([]);
+    });
+
+    it('writes the calls down in the order the server saw them', async () => {
+      const habits = legsHabit();
+
+      await habits.gateway.setSubHabitNote('sport', 'legs', '2026-10-06', 'one');
+      await habits.gateway.clearSubHabitNote('sport', 'legs', '2026-10-06');
+
+      expect(habits.calls.notes).toEqual([
+        'set sport legs 2026-10-06 one',
+        'clear sport legs 2026-10-06',
+      ]);
+    });
   });
 });

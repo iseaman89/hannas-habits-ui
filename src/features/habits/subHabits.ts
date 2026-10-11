@@ -51,6 +51,25 @@ export function subHabitProgress(
   return { due: due.length, done: due.filter((part) => part.completedDates.includes(date)).length };
 }
 
+/** The part's note on the day, or `undefined`. */
+export function noteOn(part: Pick<SubHabit, 'notes'>, date: string): string | undefined {
+  return part.notes.find((note) => note.date === date)?.text;
+}
+
+/**
+ * The parts that have something to say about the day: the ones that are due and the ones that
+ * carry a note (a note is independent of the plan, so a part that is not due can have one).
+ * In the order the parts were added.
+ */
+export function partsOnDay(
+  habit: { subHabits: readonly SubHabit[] },
+  date: string,
+): { part: SubHabit; note: string | undefined }[] {
+  return habit.subHabits
+    .map((part) => ({ part, note: noteOn(part, date) }))
+    .filter(({ part, note }) => note !== undefined || part.scheduledDates.includes(date));
+}
+
 /** "1 part", "3 parts". */
 export function partsLabel(count: number): string {
   return `${count} ${count === 1 ? 'part' : 'parts'}`;

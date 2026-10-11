@@ -3,17 +3,19 @@ import { format } from 'date-fns';
 import { ChevronDown, ChevronRight, ListChecks, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { toApiDate } from '@/shared/lib/dates';
-import { IconButton } from '@/shared/ui';
+import { HoverCard, IconButton } from '@/shared/ui';
 import { cellState } from './cells';
 import { DayCell } from './DayCell';
+import { DayNotesTip } from './DayNotesTip';
 import type { HabitOverview } from './habitsGateway';
 import { scrollLeftToCenter } from './gridScroll';
 import { daysOfMonth } from './months';
+import { NoteEditor } from './NoteEditor';
 import { PartsButton } from './PartsButton';
 import { StreakBadge } from './StreakBadge';
 import { isQuota, quotaProgressText, streakUnit } from './quota';
 import { recurrenceText } from './recurrence';
-import { partsLabel, subHabitProgress, type SubHabit } from './subHabits';
+import { noteOn, partsLabel, partsOnDay, subHabitProgress, type SubHabit } from './subHabits';
 import { dayName, scheduleLabel, type DayOfWeek } from './weekdays';
 
 interface HabitGridProps {
@@ -29,6 +31,11 @@ interface HabitGridProps {
   onToggle: (habit: HabitOverview, date: string, done: boolean) => void;
   /** The same for the cell of one part, in the part's own row. */
   onTogglePart: (habit: HabitOverview, part: SubHabit, date: string, done: boolean) => void;
+  /**
+   * The note of a part on a day was written (`text` is trimmed) or taken away (`null`). Only called
+   * for a change; the grid does not save anything itself.
+   */
+  onNote: (habit: HabitOverview, part: SubHabit, date: string, text: string | null) => void;
   /** Opens the parts a habit has on one day, to tick them one by one. */
   onDayParts: (habit: HabitOverview, date: string) => void;
   /** Opens the habit's parts to add, change and remove them. */
@@ -45,6 +52,9 @@ const stickyCell = 'sticky left-0 z-10 bg-surface';
  * habit and its day; it scrolls sideways on its own and keeps the habit names in view. A month
  * opens scrolled to today (to its start when today is not in it), so that on a phone - where only
  * a few days fit beside the names - the day that matters is the one in view.
+ *
+ * Notes live on the parts' days: hovering a part's cell (in its row, see `expandedHabitIds`) opens
+ * a card to write one, and hovering the habit's own cell lists the day's parts with their notes.
  */
 export function HabitGrid({
   habits,
@@ -54,6 +64,7 @@ export function HabitGrid({
   onToggleExpanded,
   onToggle,
   onTogglePart,
+  onNote,
   onDayParts,
   onParts,
   onEdit,
@@ -135,6 +146,7 @@ export function HabitGrid({
               onToggleExpanded={onToggleExpanded}
               onToggle={onToggle}
               onTogglePart={onTogglePart}
+              onNote={onNote}
               onDayParts={onDayParts}
               onParts={onParts}
               onEdit={onEdit}
@@ -153,6 +165,7 @@ interface HabitRowProps extends Pick<
   | 'onToggleExpanded'
   | 'onToggle'
   | 'onTogglePart'
+  | 'onNote'
   | 'onDayParts'
   | 'onParts'
   | 'onEdit'
@@ -171,6 +184,7 @@ function HabitRow({
   onToggleExpanded,
   onToggle,
   onTogglePart,
+  onNote,
   onDayParts,
   onParts,
   onEdit,
@@ -255,16 +269,37 @@ function HabitRow({
           const label = `${habit.title}, ${format(date, 'EEE d MMM')}`;
           // Open, the parts have rows of their own: the summary under the cell would say it twice.
           const progress = open ? null : subHabitProgress(habit, key);
+          // The parts of the day by name, each with its note: what hovering the cell shows.
+          const dayParts = partsOnDay(habit, key);
+          const noted = dayParts.some(({ note }) => note !== undefined);
           return (
             <td key={key} className="px-0.5 py-2 text-center align-top">
-              <DayCell state={state} label={label} onToggle={() => onToggle(habit, key, !isDone)} />
-              {progress && (
-                <PartsButton
+              <HoverCard
+                label={`Parts, ${label}`}
+                card={
+                  dayParts.length > 0 ? (
+                    <DayNotesTip
+                      title={habit.title}
+                      dayLabel={format(date, 'EEE d MMM')}
+                      parts={dayParts}
+                    />
+                  ) : null
+                }
+              >
+                <DayCell
+                  state={state}
                   label={label}
-                  progress={progress}
-                  onOpen={() => onDayParts(habit, key)}
+                  note={noted ? noteText(dayParts) : undefined}
+                  onToggle={() => onToggle(habit, key, !isDone)}
                 />
-              )}
+                {progress && (
+                  <PartsButton
+                    label={label}
+                    progress={progress}
+                    onOpen={() => onDayParts(habit, key)}
+                  />
+                )}
+              </HoverCard>
             </td>
           );
         })}
@@ -281,10 +316,19 @@ function HabitRow({
             days={days}
             today={today}
             onToggle={onTogglePart}
+            onNote={onNote}
           />
         ))}
     </>
   );
+}
+
+/** The notes of a day's parts as one sentence for a screen reader: "Legs: 3 x 10. Arms: sore". */
+function noteText(parts: readonly { part: SubHabit; note: string | undefined }[]): string {
+  return parts
+    .filter(({ note }) => note !== undefined)
+    .map(({ part, note }) => `${part.title}: ${note}`)
+    .join('. ');
 }
 
 interface PartRowProps {
@@ -293,14 +337,16 @@ interface PartRowProps {
   days: readonly Date[];
   today: string;
   onToggle: HabitGridProps['onTogglePart'];
+  onNote: HabitGridProps['onNote'];
 }
 
 /**
  * One part of an open habit: its own days (the server's `scheduledDates` for the part - the
  * habit's rule *and* the part's weekdays) and a cell to tick that day of the part alone. No
- * streak: that number is the habit's, and a part's lives on the statistics screen.
+ * streak: that number is the habit's, and a part's lives on the statistics screen. A cell that is
+ * one of the part's days (or already has a note) opens a card to write the day's note.
  */
-function PartRow({ habit, part, days, today, onToggle }: PartRowProps) {
+function PartRow({ habit, part, days, today, onToggle, onNote }: PartRowProps) {
   const done = new Set(part.completedDates);
   const due = new Set(part.scheduledDates);
 
@@ -325,13 +371,33 @@ function PartRow({ habit, part, days, today, onToggle }: PartRowProps) {
           done: isDone,
         });
         const label = `${habit.title}: ${part.title}, ${format(date, 'EEE d MMM')}`;
+        const note = noteOn(part, key);
+        // Not a day of the part (a dot) and without a note: nothing to write on. A note that is
+        // there already can be read and changed wherever it is.
+        const writable =
+          state !== 'before-start' && (state !== 'not-scheduled' || note !== undefined);
         return (
           <td key={key} className="px-0.5 py-1 text-center align-top">
-            <DayCell
-              state={state}
-              label={label}
-              onToggle={() => onToggle(habit, part, key, !isDone)}
-            />
+            <HoverCard
+              label={`Note, ${label}`}
+              card={
+                writable ? (
+                  <NoteEditor
+                    title={part.title}
+                    dayLabel={format(date, 'EEE d MMM')}
+                    initialText={note ?? ''}
+                    onSave={(text) => onNote(habit, part, key, text)}
+                  />
+                ) : null
+              }
+            >
+              <DayCell
+                state={state}
+                label={label}
+                note={note}
+                onToggle={() => onToggle(habit, part, key, !isDone)}
+              />
+            </HoverCard>
           </td>
         );
       })}

@@ -37,11 +37,14 @@ export interface FakeSubHabit {
   weekdays: DayOfWeek[];
   /** Days with a tick, `yyyy-MM-dd`. */
   completed?: string[];
+  /** Notes by day, `yyyy-MM-dd`. */
+  notes?: Record<string, string>;
 }
 
-/** `Habit.MaxSubHabits` and the title limit of the backend. */
+/** `Habit.MaxSubHabits`, the title limit and `SubHabitNote.TextMaxLength` of the backend. */
 const MAX_PARTS = 10;
 const MAX_TITLE = 150;
+const MAX_NOTE = 500;
 
 export interface FakeHabit {
   id: string;
@@ -75,6 +78,9 @@ type Call = keyof HabitsGateway;
  *   (ignoring case), days only from the habit's own, due where the habit is due *and* the weekday
  *   matches, and the habit's day follows its due parts (ticking the habit ticks them, un-ticking
  *   it clears them, the last due part completes the day, un-ticking one takes it back).
+ * - Notes of a part on a day follow the server's rules: one per day, written trimmed, a blank text
+ *   is a 400 on `text` (taking one away is `clearSubHabitNote`), at most 500 characters, independent
+ *   of the ticks, gone with the part.
  * - `hold()` lets calls wait until `release()`, to look at the screen while a request is under way.
  * - `failNext()` makes the next call of that kind fail once.
  */
@@ -97,6 +103,7 @@ export function fakeHabits(
     title: string;
     weekdays: DayOfWeek[];
     completed: Set<string>;
+    notes: Map<string, string>;
   }
 
   const habits = initial.map(({ weekdays, recurrence, subHabits = [], ...habit }) => {
@@ -106,7 +113,11 @@ export function fakeHabits(
       description: habit.description ?? null,
       recurrence: recurrence ?? weeklyRecurrence(weekdays ?? []),
       completed: new Set(habit.completed),
-      parts: subHabits.map<Part>((part) => ({ ...part, completed: new Set(part.completed ?? []) })),
+      parts: subHabits.map<Part>(({ notes, ...part }) => ({
+        ...part,
+        completed: new Set(part.completed ?? []),
+        notes: new Map(Object.entries(notes ?? {})),
+      })),
     };
   });
   type FakeHabitState = (typeof habits)[number];
@@ -175,6 +186,8 @@ export function fakeHabits(
      * a habit's tick and a part's tick must reach the server in the order of the clicks.
      */
     parts: [] as string[],
+    /** `set h-1 part-1 2026-10-07 text` / `clear h-1 part-1 2026-10-07`, in the order the server saw them. */
+    notes: [] as string[],
   };
 
   let gate: Promise<void> = Promise.resolve();
@@ -249,6 +262,10 @@ export function fakeHabits(
           completedDates: [...part.completed]
             .filter((day) => day >= query.from && day <= query.to)
             .sort(),
+          notes: [...part.notes]
+            .filter(([day]) => day >= query.from && day <= query.to)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([date, text]) => ({ date, text })),
         })),
       }));
     },
@@ -404,6 +421,7 @@ export function fakeHabits(
         title,
         weekdays: [...input.weekdays],
         completed: new Set(),
+        notes: new Map(),
       };
       habit.parts.push(part);
       return { id: part.id, title: part.title, weekdays: [...part.weekdays] };
@@ -451,6 +469,32 @@ export function fakeHabits(
         if (partIsDue(habit, part, date)) habit.completed.delete(date);
       });
     },
+
+    setSubHabitNote: async (habitId, subHabitId, date, text) => {
+      calls.notes.push(`set ${habitId} ${subHabitId} ${date} ${text}`);
+      await enter('setSubHabitNote');
+      const habit = find(habitId);
+      const part = habit.parts.find((candidate) => candidate.id === subHabitId);
+      if (!part) throw apiError(404, { title: 'Not found' });
+
+      const trimmed = text.trim();
+      if (trimmed === '')
+        throw apiError(400, { fieldErrors: { text: ['The note must not be empty.'] } });
+      if (trimmed.length > MAX_NOTE)
+        throw apiError(400, { fieldErrors: { text: [`At most ${MAX_NOTE} characters.`] } });
+
+      part.notes.set(date, trimmed);
+      return { date, text: trimmed };
+    },
+
+    clearSubHabitNote: async (habitId, subHabitId, date) => {
+      calls.notes.push(`clear ${habitId} ${subHabitId} ${date}`);
+      await enter('clearSubHabitNote');
+      // Like the gateway: a part that is gone, and its notes with it, is not an error.
+      find(habitId)
+        .parts.find((candidate) => candidate.id === subHabitId)
+        ?.notes.delete(date);
+    },
   };
 
   return {
@@ -469,6 +513,12 @@ export function fakeHabits(
         weekdays: [...weekdays],
         completed: [...completed].sort(),
       })),
+
+    /** The notes the "server" holds for one part, oldest day first. */
+    notesOf: (habitId: string, subHabitId: string) =>
+      [...(find(habitId).parts.find((part) => part.id === subHabitId)?.notes ?? [])]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, text]) => ({ date, text })),
 
     /** The most mark/un-mark requests that were under way at the same moment. */
     mostMarksAtOnce: () => mostMarksAtOnce,

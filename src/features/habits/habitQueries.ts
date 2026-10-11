@@ -14,6 +14,8 @@ export const habitKeys = {
   statistics: (query: OverviewQuery) => ['habits', 'statistics', query] as const,
   details: (id: string) => ['habits', 'details', id] as const,
   marks: ['habits', 'marks'] as const,
+  /** Notes of parts, written one after the other (a text under way must not be overtaken). */
+  notes: ['habits', 'notes'] as const,
   /** Tags put on / taken off a day: written one after the other, like the marks. */
   dayTags: ['habits', 'day-tags'] as const,
 };

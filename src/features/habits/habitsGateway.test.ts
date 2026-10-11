@@ -228,6 +228,57 @@ describe('habits gateway', () => {
       expect(requests[0]).toMatchObject({ method: 'delete', url: '/habits/h-1/sub-habits/s-1' });
     });
 
+    it('writes a note with PUT on the part and day, and returns it', async () => {
+      const note = { date: '2026-10-07', text: '3 x 10' };
+      const { gateway, requests } = gatewayFor({ status: 200, data: note });
+
+      await expect(gateway.setSubHabitNote('h-1', 's-1', '2026-10-07', '3 x 10')).resolves.toEqual(
+        note,
+      );
+
+      expect(requests[0]).toMatchObject({
+        method: 'put',
+        url: '/habits/h-1/sub-habits/s-1/notes/2026-10-07',
+        body: { text: '3 x 10' },
+      });
+    });
+
+    it('reports a refused note: the 400 and its field, a part that is gone', async () => {
+      const blank = gatewayFor({
+        status: 400,
+        data: { title: 'Validation', status: 400, errors: { Text: ['Must not be empty.'] } },
+      });
+      await expect(
+        blank.gateway.setSubHabitNote('h-1', 's-1', '2026-10-07', ' '),
+      ).rejects.toMatchObject({ status: 400 });
+
+      const gone = gatewayFor({ status: 404, data: { title: 'Not found' } });
+      await expect(
+        gone.gateway.setSubHabitNote('h-1', 's-1', '2026-10-07', 'x'),
+      ).rejects.toMatchObject({ status: 404 });
+    });
+
+    it('takes a note away with DELETE, and does not mind one that is gone', async () => {
+      const taken = gatewayFor({ status: 204 });
+      await expect(
+        taken.gateway.clearSubHabitNote('h-1', 's-1', '2026-10-07'),
+      ).resolves.toBeUndefined();
+      expect(taken.requests[0]).toMatchObject({
+        method: 'delete',
+        url: '/habits/h-1/sub-habits/s-1/notes/2026-10-07',
+      });
+
+      const missing = gatewayFor({ status: 404, data: { title: 'Not found' } });
+      await expect(
+        missing.gateway.clearSubHabitNote('h-1', 's-1', '2026-10-07'),
+      ).resolves.toBeUndefined();
+
+      const broken = gatewayFor({ status: 500 });
+      await expect(
+        broken.gateway.clearSubHabitNote('h-1', 's-1', '2026-10-07'),
+      ).rejects.toMatchObject({ status: 500 });
+    });
+
     it('does not treat removing a part that is gone as a failure, but reports the rest', async () => {
       const gone = gatewayFor({ status: 404, data: { title: 'Not found' } });
       await expect(gone.gateway.removeSubHabit('h-1', 's-1')).resolves.toBeUndefined();

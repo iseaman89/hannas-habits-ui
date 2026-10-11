@@ -14,6 +14,8 @@ export type CreatedHabit = Schema<'CreateHabitDto'>;
 export type TaggedDay = Schema<'TaggedDayDto'>;
 /** A part of a habit as the server holds it: its title and the weekdays it is planned on. */
 export type SubHabitDetails = Schema<'SubHabitDto'>;
+/** The note of a part on one day, as the server answers after writing it. */
+export type SubHabitNote = Schema<'SubHabitNoteDto'>;
 
 /**
  * The range and the "today" of an overview. Optional in the OpenAPI document, but the server
@@ -93,6 +95,19 @@ export interface HabitsGateway {
   markSubHabit: (habitId: string, subHabitId: string, date: string) => Promise<void>;
   /** Takes a part's tick back. A tick that is not there is already what was asked for. */
   unmarkSubHabit: (habitId: string, subHabitId: string, date: string) => Promise<void>;
+  /**
+   * Writes the part's note on a day (one per part and day; a second write replaces the text),
+   * independent of the tick. The text must not be blank - taking a note away is `clearSubHabitNote`.
+   * Answers with the note as stored (trimmed).
+   */
+  setSubHabitNote: (
+    habitId: string,
+    subHabitId: string,
+    date: string,
+    text: string,
+  ) => Promise<SubHabitNote>;
+  /** Takes the note away. A day without one - or a part that is gone - is already what was asked for. */
+  clearSubHabitNote: (habitId: string, subHabitId: string, date: string) => Promise<void>;
 }
 
 export function createHabitsGateway(client: TypedApi): HabitsGateway {
@@ -172,6 +187,25 @@ export function createHabitsGateway(client: TypedApi): HabitsGateway {
       } catch (error) {
         // Like a habit's own un-mark: a tick that is not there (or a part that is gone) is not
         // marked, which is what the person asked for.
+        if (error instanceof ApiError && error.status === 404) return;
+        throw error;
+      }
+    },
+
+    setSubHabitNote: (habitId, subHabitId, date, text) =>
+      client.put('/api/habits/{habitId}/sub-habits/{subHabitId}/notes/{date}', {
+        path: { habitId, subHabitId, date },
+        body: { text },
+      }),
+
+    clearSubHabitNote: async (habitId, subHabitId, date) => {
+      try {
+        await client.delete('/api/habits/{habitId}/sub-habits/{subHabitId}/notes/{date}', {
+          path: { habitId, subHabitId, date },
+        });
+      } catch (error) {
+        // The server answers 204 for a day without a note; a 404 is a part or habit that is gone,
+        // and with it the note: also the end state that was asked for.
         if (error instanceof ApiError && error.status === 404) return;
         throw error;
       }

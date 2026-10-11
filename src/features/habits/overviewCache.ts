@@ -21,6 +21,15 @@ export interface SubHabitCompletionChange {
   done: boolean;
 }
 
+/** The note of one part on one day being written, or - `text: null` - taken away. */
+export interface SubHabitNoteChange {
+  habitId: string;
+  subHabitId: string;
+  /** `yyyy-MM-dd` */
+  date: string;
+  text: string | null;
+}
+
 /** A part ticked or un-ticked on a day (`completedDates` stay oldest first, without duplicates). */
 function withPartTick(part: SubHabit, date: string, done: boolean): SubHabit {
   if (part.completedDates.includes(date) === done) return part;
@@ -103,6 +112,30 @@ export function withSubHabitCompletion(
     const due = subHabits.filter((part) => part.scheduledDates.includes(date));
     const allDone = due.every((part) => part.completedDates.includes(date));
     return allDone && !dayIsDone ? withHabitDay(next, date, true) : next;
+  });
+}
+
+/**
+ * The part's note on the day is `text` (or gone for `null`). `notes` stays oldest first with one
+ * note per day, like the server's list. Ticks and the habit's day are not touched: a note is
+ * independent of them.
+ */
+export function withSubHabitNote(
+  habits: readonly HabitOverview[],
+  { habitId, subHabitId, date, text }: SubHabitNoteChange,
+): HabitOverview[] {
+  return habits.map((habit) => {
+    if (habit.id !== habitId) return habit;
+    return {
+      ...habit,
+      subHabits: habit.subHabits.map((part) => {
+        if (part.id !== subHabitId) return part;
+        const others = part.notes.filter((note) => note.date !== date);
+        const notes = text === null ? others : [...others, { date, text }];
+        // `yyyy-MM-dd` sorts the same as the calendar.
+        return { ...part, notes: notes.sort((a, b) => a.date.localeCompare(b.date)) };
+      }),
+    };
   });
 }
 
@@ -192,6 +225,10 @@ export function applySubHabitCompletion(
   change: SubHabitCompletionChange,
 ): void {
   applyToOverviews(queryClient, change.date, (habits) => withSubHabitCompletion(habits, change));
+}
+
+export function applySubHabitNote(queryClient: QueryClient, change: SubHabitNoteChange): void {
+  applyToOverviews(queryClient, change.date, (habits) => withSubHabitNote(habits, change));
 }
 
 export function applyTagChange(queryClient: QueryClient, change: TagChange): void {

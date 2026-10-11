@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { recurrenceOf, weeklyRecurrence } from '@/test/recurrence';
 import {
+  noteOn,
+  partsOnDay,
   dueSubHabits,
   habitWeekdays,
   partsLabel,
@@ -45,6 +47,7 @@ const legs: SubHabit = {
   weekdays: [1],
   scheduledDates: ['2026-10-05', '2026-10-12'],
   completedDates: ['2026-10-05'],
+  notes: [],
 };
 const arms: SubHabit = {
   id: 's-arms',
@@ -52,6 +55,7 @@ const arms: SubHabit = {
   weekdays: [1, 3],
   scheduledDates: ['2026-10-05', '2026-10-07', '2026-10-12'],
   completedDates: [],
+  notes: [],
 };
 
 describe('dueSubHabits', () => {
@@ -116,5 +120,52 @@ describe('strandedWeekdays', () => {
 
   it('is empty while every day of the part is a day of the habit', () => {
     expect(strandedWeekdays({ weekdays: [1, 3] }, [1, 2, 3])).toEqual([]);
+  });
+});
+
+describe('noteOn', () => {
+  const noted = { ...legs, notes: [{ date: '2026-10-05', text: '3 x 10' }] };
+
+  it('finds the part’s note of the day', () => {
+    expect(noteOn(noted, '2026-10-05')).toBe('3 x 10');
+  });
+
+  it('is undefined for a day without one', () => {
+    expect(noteOn(noted, '2026-10-12')).toBeUndefined();
+    expect(noteOn(legs, '2026-10-05')).toBeUndefined();
+  });
+});
+
+describe('partsOnDay', () => {
+  const notedLegs = { ...legs, notes: [{ date: '2026-10-05', text: '3 x 10' }] };
+  // Arms is due on Monday and Wednesday; a note on Friday, a day it is not due on.
+  const strayArms = { ...arms, notes: [{ date: '2026-10-09', text: 'stretched instead' }] };
+
+  it('lists the parts that are due, with their note if they have one, in the order they were added', () => {
+    const habit = { subHabits: [notedLegs, arms] };
+
+    expect(partsOnDay(habit, '2026-10-05')).toEqual([
+      { part: notedLegs, note: '3 x 10' },
+      { part: arms, note: undefined },
+    ]);
+  });
+
+  it('leaves out a part that is not due that day', () => {
+    const habit = { subHabits: [notedLegs, arms] };
+
+    expect(partsOnDay(habit, '2026-10-07').map(({ part }) => part.id)).toEqual(['s-arms']);
+  });
+
+  it('keeps a part that is not due but has a note: a note is independent of the plan', () => {
+    const habit = { subHabits: [notedLegs, strayArms] };
+
+    expect(partsOnDay(habit, '2026-10-09')).toEqual([
+      { part: strayArms, note: 'stretched instead' },
+    ]);
+  });
+
+  it('is empty for a day nothing is due on and nothing is noted', () => {
+    expect(partsOnDay({ subHabits: [notedLegs, arms] }, '2026-10-06')).toEqual([]);
+    expect(partsOnDay({ subHabits: [] }, '2026-10-05')).toEqual([]);
   });
 });

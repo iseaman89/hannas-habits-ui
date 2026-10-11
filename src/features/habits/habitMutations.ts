@@ -8,9 +8,11 @@ import {
   applyCompletion,
   applyDayTags,
   applySubHabitCompletion,
+  applySubHabitNote,
   applyTagChange,
   type CompletionChange,
   type SubHabitCompletionChange,
+  type SubHabitNoteChange,
   type TagChange,
 } from './overviewCache';
 
@@ -124,6 +126,40 @@ export function useMarkSubHabit(gateway: HabitsGateway) {
       toast.error(errorMessage(error, 'Could not save that part. Please try again.'));
     },
     onSettled: settle,
+  });
+}
+
+/**
+ * Writing a part's note on a day, or taking it away (`text: null`), optimistically: the dot on
+ * the cell and the text in the habit's card change at once, the request follows.
+ *
+ * - **Serial.** All note writes share one `scope`: the editor saves while the person types, and
+ *   two requests for the same note must not overtake each other and leave an older text on top.
+ * - **No inverse on failure.** There is no "opposite" of a text: the person said so, and the
+ *   server's own list - fetched again - is the truth. The editor keeps its draft, so nothing typed
+ *   is lost to the failure.
+ * - **No refetch on success**: the server answers with what was sent (trimmed, as the editor
+ *   sends it), so the cache already has it.
+ */
+export function useSaveSubHabitNote(gateway: HabitsGateway) {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+
+  return useMutation({
+    mutationKey: habitKeys.notes,
+    scope: { id: 'habit-notes' },
+    mutationFn: async ({ habitId, subHabitId, date, text }: SubHabitNoteChange) => {
+      if (text === null) await gateway.clearSubHabitNote(habitId, subHabitId, date);
+      else await gateway.setSubHabitNote(habitId, subHabitId, date, text);
+    },
+    onMutate: async (change) => {
+      await queryClient.cancelQueries({ queryKey: habitKeys.overviews });
+      applySubHabitNote(queryClient, change);
+    },
+    onError: (error) => {
+      toast.error(errorMessage(error, 'Could not save that note. Please try again.'));
+      void queryClient.invalidateQueries({ queryKey: habitKeys.overviews });
+    },
   });
 }
 

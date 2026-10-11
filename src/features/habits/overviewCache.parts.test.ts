@@ -21,7 +21,7 @@ function part(
   completedDates: string[] = [],
   weekdays: SubHabit['weekdays'] = [1],
 ): SubHabit {
-  return { id, title: id, weekdays, scheduledDates, completedDates };
+  return { id, title: id, weekdays, scheduledDates, completedDates, notes: [] };
 }
 
 function sport(subHabits: SubHabit[], completedDates: string[] = []): HabitOverview {
