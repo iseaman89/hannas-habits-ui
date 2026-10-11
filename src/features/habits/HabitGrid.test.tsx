@@ -77,7 +77,9 @@ const phone: HabitOverview = {
 
 function renderGrid(overrides: Partial<Parameters<typeof HabitGrid>[0]> = {}) {
   const handlers = {
+    onToggleExpanded: vi.fn(),
     onToggle: vi.fn(),
+    onTogglePart: vi.fn(),
     onDayParts: vi.fn(),
     onParts: vi.fn(),
     onEdit: vi.fn(),
@@ -88,6 +90,7 @@ function renderGrid(overrides: Partial<Parameters<typeof HabitGrid>[0]> = {}) {
       habits={[stretch, read]}
       month={new Date(2026, 9, 1)}
       today="2026-10-07"
+      expandedHabitIds={new Set()}
       {...handlers}
       {...overrides}
     />,
@@ -323,6 +326,101 @@ describe('HabitGrid', () => {
       await user.click(screen.getByRole('button', { name: 'Parts of Read' }));
 
       expect(onParts).toHaveBeenCalledWith(read);
+    });
+
+    describe('as rows of their own', () => {
+      const open = new Set([withParts.id]);
+      const rowOf = (name: RegExp) => screen.getByRole('rowheader', { name }).closest('tr')!;
+
+      it('offers to show the parts of a habit that has some, and of no other', () => {
+        renderGrid({ habits: [withParts, stretch] });
+
+        expect(screen.getByRole('button', { name: 'Show parts of Read' })).toHaveAttribute(
+          'aria-expanded',
+          'false',
+        );
+        expect(screen.queryByRole('button', { name: /^(Show|Hide) parts of Stretch$/ })).toBeNull();
+      });
+
+      it('asks for the habit to be opened, and ticks nothing by it', async () => {
+        const user = userEvent.setup();
+        const { onToggleExpanded, onToggle } = renderGrid({ habits: [withParts] });
+
+        await user.click(screen.getByRole('button', { name: 'Show parts of Read' }));
+
+        expect(onToggleExpanded).toHaveBeenCalledWith(withParts);
+        expect(onToggle).not.toHaveBeenCalled();
+      });
+
+      it('has no row for a part while the habit is closed', () => {
+        renderGrid({ habits: [withParts] });
+
+        expect(screen.getAllByRole('row')).toHaveLength(2); // the days and the habit
+        expect(screen.queryByRole('rowheader', { name: /^Legs/ })).not.toBeInTheDocument();
+      });
+
+      it('shows a row per part right under the open habit, in the order the parts have', () => {
+        renderGrid({ habits: [withParts], expandedHabitIds: open });
+
+        expect(screen.getByRole('button', { name: 'Hide parts of Read' })).toHaveAttribute(
+          'aria-expanded',
+          'true',
+        );
+        const rows = screen.getAllByRole('row');
+        expect(rows).toHaveLength(4);
+        expect(rows[1]).toHaveTextContent(/^Read/);
+        expect(within(rows[2]!).getByRole('rowheader', { name: 'Legs of Read Mon' })).toBeVisible();
+        expect(
+          within(rows[3]!).getByRole('rowheader', { name: 'Arms of Read Mon · Wed' }),
+        ).toBeVisible();
+      });
+
+      it('draws a part by its own days and its own ticks, not by the habit’s', () => {
+        renderGrid({ habits: [withParts], expandedHabitIds: open });
+
+        const legs = within(rowOf(/^Legs/));
+        expect(legs.getByRole('button', { name: 'Read: Legs, Mon 5 Oct' })).toHaveAttribute(
+          'aria-pressed',
+          'true',
+        );
+        // Wednesday is a day of the habit, but not of Legs; the 12th is to come.
+        expect(
+          legs.getByRole('img', { name: 'Read: Legs, Wed 7 Oct: not scheduled' }),
+        ).toBeVisible();
+        expect(legs.getByRole('img', { name: 'Read: Legs, Mon 12 Oct: upcoming' })).toBeVisible();
+        const arms = within(rowOf(/^Arms/));
+        expect(arms.getByRole('button', { name: 'Read: Arms, Wed 7 Oct' })).toHaveAttribute(
+          'aria-pressed',
+          'false',
+        );
+      });
+
+      it('ticks a part on its own day - the part, not the habit', async () => {
+        const user = userEvent.setup();
+        const { onTogglePart, onToggle } = renderGrid({
+          habits: [withParts],
+          expandedHabitIds: open,
+        });
+
+        await user.click(screen.getByRole('button', { name: 'Read: Arms, Wed 7 Oct' }));
+        await user.click(screen.getByRole('button', { name: 'Read: Legs, Mon 5 Oct' }));
+
+        expect(onTogglePart).toHaveBeenNthCalledWith(1, withParts, arms, '2026-10-07', true);
+        expect(onTogglePart).toHaveBeenNthCalledWith(2, withParts, legs, '2026-10-05', false);
+        expect(onToggle).not.toHaveBeenCalled();
+      });
+
+      it('leaves out the summary under the days: the rows say it', () => {
+        renderGrid({ habits: [withParts], expandedHabitIds: open });
+
+        expect(screen.queryByRole('button', { name: /^Parts, / })).not.toBeInTheDocument();
+      });
+
+      it('shows nothing extra for a habit that has no parts, whatever was open', () => {
+        renderGrid({ habits: [stretch], expandedHabitIds: new Set([stretch.id]) });
+
+        expect(screen.getAllByRole('row')).toHaveLength(2);
+      });
     });
   });
 

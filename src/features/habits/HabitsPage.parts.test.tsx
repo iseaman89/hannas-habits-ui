@@ -229,6 +229,97 @@ describe('ticking the parts of a day', () => {
   });
 });
 
+describe('the parts as rows under the habit', () => {
+  const show = (user: ReturnType<typeof userEvent.setup>) =>
+    user.click(screen.getByRole('button', { name: 'Show parts of Sport' }));
+
+  it('opens and closes the rows of the parts with the button of the habit', async () => {
+    const user = userEvent.setup();
+    renderPage(fakeHabits([sport()]));
+    await screen.findByRole('table');
+    expect(screen.queryByRole('rowheader', { name: /^Legs/ })).toBeNull();
+
+    await show(user);
+
+    for (const part of ['Legs', 'Arms', 'Core']) {
+      expect(
+        screen.getByRole('rowheader', { name: new RegExp(`^${part} of Sport`) }),
+      ).toBeVisible();
+    }
+
+    await user.click(screen.getByRole('button', { name: 'Hide parts of Sport' }));
+
+    expect(screen.queryByRole('rowheader', { name: /^Legs/ })).toBeNull();
+  });
+
+  it('ticks one part from its row, and completes the habit’s day with the last one', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([sport()]);
+    renderPage(fake);
+    await screen.findByRole('table');
+    await show(user);
+
+    // Wednesday: Arms is the only part due, so it is the whole day.
+    await user.click(cell('Sport: Arms, Wed 7 Oct'));
+
+    expect(cell('Sport: Arms, Wed 7 Oct')).toHaveAttribute('aria-pressed', 'true');
+    expect(cell('Sport, Wed 7 Oct')).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() => expect(fake.marksOf('h-sport')).toEqual(['2026-10-07']));
+    expect(fake.calls.marks).toEqual(['mark-part h-sport s-arms 2026-10-07']);
+  });
+
+  it('takes a part back from its row, and the habit’s day with it', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([
+      sport({
+        completed: ['2026-10-05'],
+        subHabits: [
+          { id: 's-legs', title: 'Legs', weekdays: [1], completed: ['2026-10-05'] },
+          { id: 's-arms', title: 'Arms', weekdays: [1], completed: ['2026-10-05'] },
+        ],
+      }),
+    ]);
+    renderPage(fake);
+    await screen.findByRole('table');
+    await show(user);
+
+    await user.click(cell('Sport: Legs, Mon 5 Oct'));
+
+    expect(cell('Sport: Legs, Mon 5 Oct')).toHaveAttribute('aria-pressed', 'false');
+    expect(cell('Sport: Arms, Mon 5 Oct')).toHaveAttribute('aria-pressed', 'true');
+    expect(cell('Sport, Mon 5 Oct')).toHaveAttribute('aria-pressed', 'false');
+    await waitFor(() =>
+      expect(fake.calls.marks).toEqual(['unmark-part h-sport s-legs 2026-10-05']),
+    );
+  });
+
+  it('shows the parts ticked by the habit’s own cell', async () => {
+    const user = userEvent.setup();
+    renderPage(fakeHabits([sport()]));
+    await screen.findByRole('table');
+    await show(user);
+
+    await user.click(cell('Sport, Mon 5 Oct'));
+
+    expect(cell('Sport: Legs, Mon 5 Oct')).toHaveAttribute('aria-pressed', 'true');
+    expect(cell('Sport: Arms, Mon 5 Oct')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('keeps the habit open while the months are paged through', async () => {
+    const user = userEvent.setup();
+    renderPage(fakeHabits([sport()]));
+    await screen.findByRole('table');
+    await show(user);
+
+    await user.click(screen.getByRole('button', { name: 'Previous month' }));
+    expect(await screen.findByRole('button', { name: 'Hide parts of Sport' })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Next month' }));
+    expect(await screen.findByRole('button', { name: 'Hide parts of Sport' })).toBeVisible();
+    expect(screen.getByRole('rowheader', { name: /^Legs of Sport/ })).toBeVisible();
+  });
+});
+
 describe('ticking the habit’s own day', () => {
   it('ticks the parts that are due that day', async () => {
     const user = userEvent.setup();

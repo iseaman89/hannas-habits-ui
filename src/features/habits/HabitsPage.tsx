@@ -22,7 +22,7 @@ import { EditHabitDialog } from './EditHabitDialog';
 import { GridLegend } from './GridLegend';
 import { isQuota } from './quota';
 import { HabitGrid } from './HabitGrid';
-import { useMarkHabit } from './habitMutations';
+import { useMarkHabit, useMarkSubHabit } from './habitMutations';
 import { useHabitOverview } from './habitQueries';
 import { habitsGateway, type HabitsGateway } from './habitsGateway';
 import { SubHabitsDialog } from './SubHabitsDialog';
@@ -44,6 +44,9 @@ type DialogState =
 export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGateway }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [dialog, setDialog] = useState<DialogState>({ kind: 'none' });
+  // Here and not in the grid: a month that is still loading shows a skeleton instead of the grid,
+  // so the grid is gone while the person pages through the months - the open habits must not be.
+  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set());
 
   const now = useToday();
   const today = toApiDate(now);
@@ -51,6 +54,15 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
 
   const overview = useHabitOverview(gateway, { ...monthRange(month), asOf: today });
   const mark = useMarkHabit(gateway);
+  const markPart = useMarkSubHabit(gateway);
+
+  function toggleExpanded(habitId: string) {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (!next.delete(habitId)) next.add(habitId);
+      return next;
+    });
+  }
 
   function showMonth(target: Date) {
     // The current month is the default: keep its address clean.
@@ -107,7 +119,12 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
           habits={habits}
           month={month}
           today={today}
+          expandedHabitIds={expandedIds}
+          onToggleExpanded={(habit) => toggleExpanded(habit.id)}
           onToggle={(habit, date, done) => mark.mutate({ habitId: habit.id, date, done })}
+          onTogglePart={(habit, part, date, done) =>
+            markPart.mutate({ habitId: habit.id, subHabitId: part.id, date, done })
+          }
           onDayParts={(habit, date) => setDialog({ kind: 'day-parts', habitId: habit.id, date })}
           onParts={(habit) => setDialog({ kind: 'parts', habitId: habit.id })}
           onEdit={(habit) => setDialog({ kind: 'edit', habitId: habit.id })}
