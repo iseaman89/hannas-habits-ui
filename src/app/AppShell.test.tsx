@@ -24,6 +24,7 @@ function renderShell(at: string) {
           },
           { path: '/habits', element: <h1>Habits</h1> },
           { path: '/habits/archive', element: <h1>Archive</h1> },
+          { path: '/statistics', element: <h1>Statistics</h1> },
         ],
       },
     ],
@@ -70,6 +71,13 @@ describe('AppShell', () => {
 
     expect(screen.getByRole('heading', { name: 'Habits' })).toBeInTheDocument();
     expect(screen.getByRole('main')).toHaveFocus();
+  });
+
+  it('marks Habits as the current screen on its statistics, which have no entry of their own', () => {
+    renderShell('/statistics');
+
+    expect(screen.getByRole('link', { name: 'Habits' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Today' })).not.toHaveAttribute('aria-current');
   });
 
   it('keeps the focus on the control the person is paging with within one screen', async () => {

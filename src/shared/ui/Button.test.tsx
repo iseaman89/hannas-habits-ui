@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { Button, IconButton } from './Button';
+import { buttonClassName } from './buttonStyles';
 
 describe('Button', () => {
   it('is a real button that does not submit a form unless told to', async () => {
@@ -74,5 +75,22 @@ describe('IconButton', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Delete habit' })).toBeInTheDocument();
+  });
+});
+
+describe('buttonClassName', () => {
+  it('gives a link the look of a button of the variant and size', () => {
+    const classes = buttonClassName({ variant: 'secondary', size: 'sm', className: 'extra' });
+
+    expect(classes).toContain('rounded-full');
+    expect(classes).toContain('bg-accent-200');
+    expect(classes).toContain('h-9');
+    expect(classes).toContain('extra');
+  });
+
+  it('is the primary medium button by default - the same classes the button itself uses', () => {
+    render(<Button>Save</Button>);
+
+    expect(screen.getByRole('button').className).toBe(buttonClassName());
   });
 });

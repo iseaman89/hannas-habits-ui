@@ -51,6 +51,20 @@ describe('applyServerError', () => {
     ]);
   });
 
+  it('shows a complaint under the field an alias points to, when the form has it', () => {
+    const { calls, setError } = recorder();
+    const error = problem(400, { fieldErrors: { rate: ['Too high.'], speed: ['Too fast.'] } });
+
+    const formMessage = applyServerError(error, setError, fields, {
+      rate: 'email',
+      // An alias to a field the form does not show is a complaint nobody can act on.
+      speed: 'nowhere' as 'email',
+    });
+
+    expect(calls).toEqual([{ field: 'email', message: 'Too high.', shouldFocus: true }]);
+    expect(formMessage).not.toBeNull();
+  });
+
   it('returns a message for the whole form when a complaint has no field to go to', () => {
     const { calls, setError } = recorder();
     const error = problem(400, {

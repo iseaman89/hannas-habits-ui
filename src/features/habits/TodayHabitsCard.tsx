@@ -5,10 +5,13 @@ import { parseApiDate, toApiDate } from '@/shared/lib/dates';
 import { useToday } from '@/shared/lib/useToday';
 import { Button, Card, Checkbox, FormMessage, Skeleton, SkeletonGroup } from '@/shared/ui';
 import { cellState, isToggleable, type CellState } from './cells';
-import { useMarkHabit } from './habitMutations';
+import { useMarkHabit, useMarkSubHabit } from './habitMutations';
 import { useHabitOverview } from './habitQueries';
 import { habitsGateway, type HabitOverview, type HabitsGateway } from './habitsGateway';
+import { isQuota, quotaProgressText, streakUnit } from './quota';
 import { StreakBadge } from './StreakBadge';
+import { SubHabitChecklist } from './SubHabitChecklist';
+import { dueSubHabits } from './subHabits';
 
 interface TodayHabitsCardProps {
   /** The day the diary shows, `yyyy-MM-dd`. */
@@ -26,13 +29,15 @@ interface HabitOfTheDay {
  * side panel. It asks for the overview of just that day (`from = to = date`) and shares the
  * cache and the marking with the month grid, so a tick here shows in the grid and the other way
  * round. What counts for the day is `cellState`, the same rule as the grid: a habit that did
- * not exist yet, or is not planned for that weekday, is left out. The streak shown is the
- * current one as of the real today, not of the day that is on screen.
+ * not exist yet, or is not due that day (whatever its rule - weekdays, every N weeks, monthly),
+ * is left out. The streak shown is the current one as of the real today, not of the day that
+ * is on screen.
  */
 export function TodayHabitsCard({ date, gateway = habitsGateway }: TodayHabitsCardProps) {
   const today = toApiDate(useToday());
   const overview = useHabitOverview(gateway, { from: date, to: date, asOf: today });
   const mark = useMarkHabit(gateway);
+  const markPart = useMarkSubHabit(gateway);
 
   // `date` comes from a validated route, so the parse only fails for a caller that got it wrong.
   const day = parseApiDate(date);
@@ -45,8 +50,9 @@ export function TodayHabitsCard({ date, gateway = habitsGateway }: TodayHabitsCa
               date: day,
               today,
               startDate: habit.startDate,
-              schedule: habit.schedule,
+              scheduled: habit.scheduledDates.includes(date),
               done: habit.completedDates.includes(date),
+              quota: isQuota(habit.recurrence),
             }),
           }))
           .filter(({ state }) => state !== 'before-start' && state !== 'not-scheduled')
@@ -81,19 +87,36 @@ export function TodayHabitsCard({ date, gateway = habitsGateway }: TodayHabitsCa
     return (
       <ul className="flex flex-col gap-3">
         {planned.map(({ habit, state }) => (
-          <li key={habit.id} className="flex items-center gap-3">
-            <Checkbox
-              shape="circle"
-              tone="accent-2"
-              label={habit.title}
-              checked={state === 'done'}
-              disabled={!isToggleable(state)}
-              onChange={(done) => mark.mutate({ habitId: habit.id, date, done })}
-            />
-            <span aria-hidden className="min-w-0 flex-1 truncate font-semibold">
-              {habit.title}
-            </span>
-            <StreakBadge days={habit.currentStreak} />
+          <li key={habit.id} className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                shape="circle"
+                tone="accent-2"
+                label={habit.title}
+                checked={state === 'done'}
+                disabled={!isToggleable(state)}
+                onChange={(done) => mark.mutate({ habitId: habit.id, date, done })}
+              />
+              <span className="min-w-0 flex-1">
+                <span aria-hidden className="block truncate font-semibold">
+                  {habit.title}
+                </span>
+                <QuotaProgress habit={habit} day={date} today={today} />
+              </span>
+              <StreakBadge days={habit.currentStreak} unit={streakUnit(habit.recurrence)} />
+            </div>
+            {dueSubHabits(habit, date).length > 0 && (
+              // Under the title (28 px box + 12 px gap in), so the parts read as part of the habit.
+              <SubHabitChecklist
+                className="ml-10"
+                habit={habit}
+                date={date}
+                today={today}
+                onToggle={(part, done) =>
+                  markPart.mutate({ habitId: habit.id, subHabitId: part.id, date, done })
+                }
+              />
+            )}
           </li>
         ))}
       </ul>
@@ -125,5 +148,21 @@ export function TodayHabitsCard({ date, gateway = habitsGateway }: TodayHabitsCa
       </div>
       <div className="mt-3">{renderBody()}</div>
     </Card>
+  );
+}
+
+/** "2 of 3 this week" under a quota habit's name; nothing for any other rule. */
+function QuotaProgress({
+  habit,
+  day,
+  today,
+}: {
+  habit: HabitOverview;
+  day: string;
+  today: string;
+}) {
+  const text = quotaProgressText(habit, day, today);
+  return text === null ? null : (
+    <span className="block truncate text-xs text-accent-2-900">{text}</span>
   );
 }

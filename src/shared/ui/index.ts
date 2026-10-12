@@ -1,5 +1,6 @@
 export { BrandMark } from './BrandMark';
 export { Button, IconButton } from './Button';
+export { buttonClassName } from './buttonStyles';
 export type { ButtonProps, ButtonSize, ButtonVariant, IconButtonProps } from './Button';
 export { Card } from './Card';
 export type { CardTone } from './Card';
@@ -8,6 +9,7 @@ export { Dialog } from './Dialog';
 export { Field } from './Field';
 export type { FieldControlProps } from './Field';
 export { FormMessage } from './FormMessage';
+export { HoverCard } from './HoverCard';
 export { Input } from './Input';
 export type { InputProps } from './Input';
 export { PageHeader } from './PageHeader';

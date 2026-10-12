@@ -3,9 +3,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { applyServerError } from '@/shared/lib/formErrors';
 import { Button, Field, FormMessage, Input, Textarea } from '@/shared/ui';
-import { habitSchema, toHabitInput, type HabitValues } from './habitSchema';
+import {
+  START_DATE_MAX,
+  START_DATE_MIN,
+  habitSchema,
+  toHabitInput,
+  type HabitValues,
+} from './habitSchema';
 import type { HabitInput } from './habitsGateway';
-import { WeekdayToggle } from './WeekdayToggle';
+import { sameRecurrence } from './recurrence';
+import { recurrenceSchema } from './recurrenceSchema';
+import { RecurrencePicker } from './RecurrencePicker';
 
 interface HabitFormProps {
   /** What the fields start with (empty for a new habit, the saved habit for an edit). */
@@ -15,35 +23,79 @@ interface HabitFormProps {
   /** Rejects with the `ApiError` of a failed attempt; resolves once the change is saved. */
   onSubmit: (input: HabitInput) => Promise<unknown>;
   onCancel: () => void;
+  /**
+   * The habit exists already: a different rule then also applies to the days that have passed
+   * (the rule has no history, DESIGN.md §9), and the form says so when the rule is changed.
+   */
+  editing?: boolean;
 }
 
-const FIELDS = ['title', 'description', 'schedule'] as const;
+const FIELDS = [
+  'title',
+  'description',
+  'startDate',
+  'recurrence.kind',
+  'recurrence.weekdays',
+  'recurrence.everyWeeks',
+  'recurrence.everyDays',
+  'recurrence.anchor',
+  'recurrence.occurrence',
+  'recurrence.weekday',
+  'recurrence.dayOfMonth',
+  'recurrence.times',
+] as const;
 
 /** One form for adding and for editing a habit (the old UI had two copies of it). */
-export function HabitForm({ initial, submitLabel, onSubmit, onCancel }: HabitFormProps) {
+export function HabitForm({
+  initial,
+  submitLabel,
+  onSubmit,
+  onCancel,
+  editing = false,
+}: HabitFormProps) {
   const {
     register,
     control: formControl,
     handleSubmit,
     setError,
+    getValues,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<HabitValues>({ resolver: zodResolver(habitSchema), defaultValues: initial });
   const [formMessage, setFormMessage] = useState<string | null>(null);
 
   const title = watch('title');
-  const schedule = watch('schedule');
+  const startDate = watch('startDate');
+  const rule = watch('recurrence');
+  const ruleIsValid = recurrenceSchema.safeParse(rule).success;
   // The design keeps the button off until there is something to save.
-  const canSubmit = title.trim() !== '' && schedule.length > 0;
+  const canSubmit = title.trim() !== '' && !(rule.kind === 'weekly' && rule.weekdays.length === 0);
+  // "3×/week" is only true of a rule that repeats every week, or counts a number a week.
+  const perWeek = ((): string => {
+    if (rule.kind === 'weekly' && rule.everyWeeks === 1) return ` · ${rule.weekdays.length}×/week`;
+    if (rule.kind === 'timesPerWeek' && ruleIsValid) return ` · ${rule.times}×/week`;
+    if (rule.kind === 'timesPerMonth' && ruleIsValid) return ` · ${rule.times}×/month`;
+    return '';
+  })();
+  const ruleChanged = editing && ruleIsValid && !sameRecurrence(initial.recurrence, rule);
 
   const submit = handleSubmit(async (values) => {
     setFormMessage(null);
     try {
       await onSubmit(toHabitInput(values));
     } catch (error) {
-      setFormMessage(applyServerError(error, setError, FIELDS));
+      // The server has one `interval`; on screen it is the weeks or the days, whichever is chosen.
+      const interval =
+        getValues('recurrence.kind') === 'everyNDays'
+          ? 'recurrence.everyDays'
+          : 'recurrence.everyWeeks';
+      setFormMessage(
+        applyServerError(error, setError, FIELDS, { 'recurrence.interval': interval }),
+      );
     }
   });
+
+  const ruleErrors = errors.recurrence;
 
   return (
     <form noValidate onSubmit={(event) => void submit(event)} className="flex flex-col gap-5">
@@ -54,16 +106,51 @@ export function HabitForm({ initial, submitLabel, onSubmit, onCancel }: HabitFor
       </Field>
 
       <Controller
-        name="schedule"
+        name="recurrence"
         control={formControl}
         render={({ field }) => (
-          <WeekdayToggle
+          <RecurrencePicker
             value={field.value}
             onChange={field.onChange}
-            error={errors.schedule?.message}
+            startDate={startDate}
+            summarize={ruleIsValid}
+            errors={{
+              kind: ruleErrors?.kind?.message,
+              weekdays: ruleErrors?.weekdays?.message,
+              everyWeeks: ruleErrors?.everyWeeks?.message,
+              everyDays: ruleErrors?.everyDays?.message,
+              anchor: ruleErrors?.anchor?.message,
+              occurrence: ruleErrors?.occurrence?.message,
+              weekday: ruleErrors?.weekday?.message,
+              dayOfMonth: ruleErrors?.dayOfMonth?.message,
+              times: ruleErrors?.times?.message,
+            }}
           />
         )}
       />
+
+      {ruleChanged && (
+        <p className="-mt-2 px-3 text-sm text-neutral-700">
+          The new rule also applies to days that have passed: the grid and the streak are worked out
+          again with it. Marks you made are kept, even on days that no longer count.
+        </p>
+      )}
+
+      <Field
+        label="Starts on"
+        hint="Pick an earlier day to fill in what you already did."
+        error={errors.startDate?.message}
+      >
+        {(control) => (
+          <Input
+            type="date"
+            min={START_DATE_MIN}
+            max={START_DATE_MAX}
+            {...control}
+            {...register('startDate')}
+          />
+        )}
+      </Field>
 
       <Field label="Note (optional)" error={errors.description?.message}>
         {(control) => <Textarea rows={3} {...control} {...register('description')} />}
@@ -76,7 +163,8 @@ export function HabitForm({ initial, submitLabel, onSubmit, onCancel }: HabitFor
           Cancel
         </Button>
         <Button type="submit" loading={isSubmitting} disabled={!canSubmit}>
-          {submitLabel} · {schedule.length}×/week
+          {submitLabel}
+          {perWeek}
         </Button>
       </div>
     </form>

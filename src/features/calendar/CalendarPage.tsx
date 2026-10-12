@@ -12,6 +12,16 @@ import { MoodLegend } from './MoodLegend';
 import { FIRST_YEAR, parseYearParam, yearRange } from './years';
 
 /**
+ * The twelve months as a rectangle: 4 × 3, then 3 × 4, 2 × 6 and 1 × 12 as the room gets
+ * smaller. Every count divides 12, so there is never a half-empty last row. The columns follow
+ * the room the grid has (container queries on `@container`, set in `CalendarPage`), not the
+ * screen: from `lg` up the sidebar takes 15 rem, so the same screen width holds fewer columns
+ * with it than without. The breakpoints are Tailwind's `@lg` / `@3xl` / `@5xl` (32 / 48 / 64 rem),
+ * which keep a month at 238 px or more.
+ */
+const YEAR_GRID = 'grid grid-cols-1 gap-6 @lg:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4';
+
+/**
  * The year at a glance (DESIGN.md §4.4): twelve month cards, every day with an entry in the
  * colour of its mood, a click opens that day's diary. The year is part of the address
  * (`?year=2025`), so a reload and the back button stay where the person was. One request feeds
@@ -41,10 +51,7 @@ export function CalendarPage({ gateway = diaryGateway }: { gateway?: DiaryGatewa
     if (days.data === undefined) {
       if (!days.isError) {
         return (
-          <SkeletonGroup
-            label="Loading the calendar"
-            className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-6"
-          >
+          <SkeletonGroup label="Loading the calendar" className={YEAR_GRID}>
             {Array.from({ length: 12 }, (_, month) => (
               <Skeleton key={month} className="h-56 rounded-card" />
             ))}
@@ -68,7 +75,7 @@ export function CalendarPage({ gateway = diaryGateway }: { gateway?: DiaryGatewa
             No diary entries in {year} yet. Pick a day to write the first one.
           </p>
         )}
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-6">
+        <div className={YEAR_GRID}>
           {Array.from({ length: 12 }, (_, index) => new Date(year, index, 1)).map((month) => (
             <MonthCard
               key={month.getMonth()}
@@ -118,7 +125,7 @@ export function CalendarPage({ gateway = diaryGateway }: { gateway?: DiaryGatewa
         }
       />
 
-      <div className="mt-6 flex flex-col gap-6">{renderBody()}</div>
+      <div className="@container mt-6 flex flex-col gap-6">{renderBody()}</div>
     </>
   );
 }

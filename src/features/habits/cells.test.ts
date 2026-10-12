@@ -1,19 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { cellState, isToggleable, type CellState } from './cells';
-import { EVERY_DAY, type DayOfWeek } from './weekdays';
 
 // Wednesday 7 October 2026 is "today"; the habit started on Monday 5 October.
 const TODAY = '2026-10-07';
 const START = '2026-10-05';
-const MON_WED_FRI: DayOfWeek[] = [1, 3, 5];
 
-function state(day: number, options: { schedule?: DayOfWeek[]; done?: boolean } = {}): CellState {
+// Every test says itself whether the server counts the day as due (`scheduledDates`).
+function state(
+  day: number,
+  options: { scheduled?: boolean; done?: boolean; quota?: boolean } = {},
+): CellState {
   return cellState({
     date: new Date(2026, 9, day),
     today: TODAY,
     startDate: START,
-    schedule: options.schedule ?? EVERY_DAY,
+    scheduled: options.scheduled ?? true,
     done: options.done ?? false,
+    quota: options.quota,
   });
 }
 
@@ -43,21 +46,51 @@ describe('cellState', () => {
     expect(state(30)).toBe('upcoming');
   });
 
-  it('shows a day that is not in the plan as not scheduled, past or future', () => {
-    // Tue 6 (past), Thu 8 (future)
-    expect(state(6, { schedule: MON_WED_FRI })).toBe('not-scheduled');
-    expect(state(8, { schedule: MON_WED_FRI })).toBe('not-scheduled');
-    // Wed 7 is in the plan
-    expect(state(7, { schedule: MON_WED_FRI })).toBe('due-today');
+  it('shows a day the rule does not make due as not scheduled, past or future', () => {
+    expect(state(6, { scheduled: false })).toBe('not-scheduled');
+    expect(state(8, { scheduled: false })).toBe('not-scheduled');
+    expect(state(7, { scheduled: true })).toBe('due-today');
   });
 
-  it('hides a record on a day that is not in the plan or before the start', () => {
-    expect(state(6, { schedule: MON_WED_FRI, done: true })).toBe('not-scheduled');
+  it('hides a record on a day that is not due or before the start', () => {
+    expect(state(6, { scheduled: false, done: true })).toBe('not-scheduled');
     expect(state(3, { done: true })).toBe('before-start');
+  });
+
+  it('is "before-start" even where the server would not call the day due either', () => {
+    // `scheduledDates` has no day before the start, so "not due" must not win over "not applicable".
+    expect(state(3, { scheduled: false })).toBe('before-start');
   });
 
   it('keeps a record in the future visible, so it can be taken back', () => {
     expect(state(9, { done: true })).toBe('done');
+  });
+
+  describe('a quota habit ("3 times a week")', () => {
+    it('has no missed day: a past day that is not ticked is open', () => {
+      expect(state(6, { quota: true })).toBe('open');
+      expect(state(5, { quota: true })).toBe('open');
+    });
+
+    it('has no day that is due today either: today is open', () => {
+      expect(state(7, { quota: true })).toBe('open');
+    });
+
+    it('shows a ticked day as done, and a day to come as upcoming', () => {
+      expect(state(6, { quota: true, done: true })).toBe('done');
+      expect(state(7, { quota: true, done: true })).toBe('done');
+      expect(state(8, { quota: true })).toBe('upcoming');
+      expect(state(9, { quota: true, done: true })).toBe('done'); // made elsewhere: can be taken back
+    });
+
+    it('still has no days before the start', () => {
+      expect(state(4, { quota: true })).toBe('before-start');
+      expect(state(4, { quota: true, done: true })).toBe('before-start');
+    });
+
+    it('does not depend on the server listing the day', () => {
+      expect(state(6, { quota: true, scheduled: false })).toBe('open');
+    });
   });
 
   it('goes by the local calendar day, not by the time of day', () => {
@@ -66,14 +99,14 @@ describe('cellState', () => {
       date: new Date(2026, 9, 1, 0, 30),
       today: '2026-10-01',
       startDate: '2026-10-01',
-      schedule: EVERY_DAY,
+      scheduled: true,
       done: false,
     });
     const late = cellState({
       date: new Date(2026, 9, 31, 23, 30),
       today: '2026-10-31',
       startDate: '2026-10-01',
-      schedule: EVERY_DAY,
+      scheduled: true,
       done: false,
     });
     expect(early).toBe('due-today');
@@ -86,6 +119,7 @@ describe('isToggleable', () => {
     ['done', true],
     ['missed', true],
     ['due-today', true],
+    ['open', true],
     ['upcoming', false],
     ['not-scheduled', false],
     ['before-start', false],

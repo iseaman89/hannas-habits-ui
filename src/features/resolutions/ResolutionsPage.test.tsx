@@ -27,8 +27,8 @@ const HABIT_TITLES = { 'h-read': 'Read', 'h-walk': 'Walk' };
 function habitsApi() {
   const base = { description: null, startDate: '2026-01-01', completed: [] };
   return fakeHabits([
-    { id: 'h-read', title: 'Read', schedule: [1, 3, 5], ...base },
-    { id: 'h-walk', title: 'Walk', schedule: [0, 1, 2, 3, 4, 5, 6], ...base },
+    { id: 'h-read', title: 'Read', weekdays: [1, 3, 5], ...base },
+    { id: 'h-walk', title: 'Walk', weekdays: [0, 1, 2, 3, 4, 5, 6], ...base },
   ]);
 }
 

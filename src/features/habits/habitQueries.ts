@@ -11,8 +11,13 @@ export const habitKeys = {
   list: ['habits', 'list'] as const,
   overviews: ['habits', 'overview'] as const,
   overview: (query: OverviewQuery) => ['habits', 'overview', query] as const,
+  statistics: (query: OverviewQuery) => ['habits', 'statistics', query] as const,
   details: (id: string) => ['habits', 'details', id] as const,
   marks: ['habits', 'marks'] as const,
+  /** Notes of parts, written one after the other (a text under way must not be overtaken). */
+  notes: ['habits', 'notes'] as const,
+  /** Tags put on / taken off a day: written one after the other, like the marks. */
+  dayTags: ['habits', 'day-tags'] as const,
 };
 
 /** The plain list of habits, to choose one (the resolutions screen links a resolution to a habit). */
@@ -28,6 +33,19 @@ export function useHabitOverview(gateway: HabitsGateway, query: OverviewQuery) {
   return useQuery({
     queryKey: habitKeys.overview(query),
     queryFn: ({ signal }) => gateway.overview(query, signal),
+  });
+}
+
+/**
+ * What was planned and done per habit and part in the range. Asked for again every time the
+ * screen opens (`staleTime: 0`, the cached copy shows meanwhile): a tick on the habits screen or
+ * in the diary changes the numbers, and neither knows about this screen. It is one small request.
+ */
+export function useHabitStatistics(gateway: HabitsGateway, query: OverviewQuery) {
+  return useQuery({
+    queryKey: habitKeys.statistics(query),
+    queryFn: ({ signal }) => gateway.statistics(query, signal),
+    staleTime: 0,
   });
 }
 

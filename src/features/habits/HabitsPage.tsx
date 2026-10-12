@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { addMonths, format, isSameMonth, startOfMonth, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { ChartNoAxesColumn, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { errorMessage } from '@/shared/api';
 import { toApiDate } from '@/shared/lib/dates';
 import { useToday } from '@/shared/lib/useToday';
 import {
   Button,
+  buttonClassName,
   Card,
   FormMessage,
   IconButton,
@@ -15,19 +16,24 @@ import {
   SkeletonGroup,
 } from '@/shared/ui';
 import { CreateHabitDialog } from './CreateHabitDialog';
+import { DayPartsDialog } from './DayPartsDialog';
 import { DeleteHabitDialog } from './DeleteHabitDialog';
 import { EditHabitDialog } from './EditHabitDialog';
 import { GridLegend } from './GridLegend';
+import { isQuota } from './quota';
 import { HabitGrid } from './HabitGrid';
-import { useMarkHabit } from './habitMutations';
+import { useMarkHabit, useMarkSubHabit, useSaveSubHabitNote } from './habitMutations';
 import { useHabitOverview } from './habitQueries';
 import { habitsGateway, type HabitsGateway } from './habitsGateway';
+import { SubHabitsDialog } from './SubHabitsDialog';
 import { monthRange, parseMonthParam, toMonthParam } from './months';
 
 type DialogState =
   | { kind: 'none' }
   | { kind: 'create' }
   | { kind: 'edit'; habitId: string }
+  | { kind: 'parts'; habitId: string }
+  | { kind: 'day-parts'; habitId: string; date: string }
   | { kind: 'delete'; habit: { id: string; title: string } };
 
 /**
@@ -38,6 +44,9 @@ type DialogState =
 export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGateway }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [dialog, setDialog] = useState<DialogState>({ kind: 'none' });
+  // Here and not in the grid: a month that is still loading shows a skeleton instead of the grid,
+  // so the grid is gone while the person pages through the months - the open habits must not be.
+  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set());
 
   const now = useToday();
   const today = toApiDate(now);
@@ -45,6 +54,16 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
 
   const overview = useHabitOverview(gateway, { ...monthRange(month), asOf: today });
   const mark = useMarkHabit(gateway);
+  const markPart = useMarkSubHabit(gateway);
+  const saveNote = useSaveSubHabitNote(gateway);
+
+  function toggleExpanded(habitId: string) {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (!next.delete(habitId)) next.add(habitId);
+      return next;
+    });
+  }
 
   function showMonth(target: Date) {
     // The current month is the default: keep its address clean.
@@ -52,6 +71,13 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
   }
 
   const closeDialog = () => setDialog({ kind: 'none' });
+
+  // The parts' dialogs read their habit from the overview on every render, so a tick or a new part
+  // shows in them as soon as it is in the cache; a habit that is gone closes them.
+  const dialogHabit =
+    dialog.kind === 'parts' || dialog.kind === 'day-parts'
+      ? overview.data?.find((habit) => habit.id === dialog.habitId)
+      : undefined;
 
   /** What the card shows. Data that is there wins: a refresh that fails must not wipe the grid. */
   function renderBody() {
@@ -94,13 +120,26 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
           habits={habits}
           month={month}
           today={today}
+          expandedHabitIds={expandedIds}
+          onToggleExpanded={(habit) => toggleExpanded(habit.id)}
           onToggle={(habit, date, done) => mark.mutate({ habitId: habit.id, date, done })}
+          onTogglePart={(habit, part, date, done) =>
+            markPart.mutate({ habitId: habit.id, subHabitId: part.id, date, done })
+          }
+          onNote={(habit, part, date, text) =>
+            saveNote.mutate({ habitId: habit.id, subHabitId: part.id, date, text })
+          }
+          onDayParts={(habit, date) => setDialog({ kind: 'day-parts', habitId: habit.id, date })}
+          onParts={(habit) => setDialog({ kind: 'parts', habitId: habit.id })}
           onEdit={(habit) => setDialog({ kind: 'edit', habitId: habit.id })}
           onDelete={(habit) =>
             setDialog({ kind: 'delete', habit: { id: habit.id, title: habit.title } })
           }
         />
-        <GridLegend />
+        <GridLegend
+          quota={habits.some((habit) => isQuota(habit.recurrence))}
+          parts={habits.some((habit) => habit.subHabits.length > 0)}
+        />
       </div>
     );
   }
@@ -132,6 +171,21 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
             >
               <ChevronRight />
             </IconButton>
+            {/* The same month, as numbers. A link (it opens another screen), icon only on a phone. */}
+            <Link
+              to={{
+                pathname: '/statistics',
+                search: isSameMonth(month, now) ? '' : `?month=${toMonthParam(month)}`,
+              }}
+              className={buttonClassName({
+                variant: 'secondary',
+                size: 'sm',
+                className: 'max-sm:size-9 max-sm:px-0',
+              })}
+            >
+              <ChartNoAxesColumn className="size-5" aria-hidden />
+              <span className="max-sm:sr-only">Statistics</span>
+            </Link>
             {/* On a phone just the plus: the header has room for little else beside the title. */}
             <Button
               className="max-sm:size-9 max-sm:px-0"
@@ -150,6 +204,21 @@ export function HabitsPage({ gateway = habitsGateway }: { gateway?: HabitsGatewa
       <EditHabitDialog
         gateway={gateway}
         habitId={dialog.kind === 'edit' ? dialog.habitId : null}
+        onClose={closeDialog}
+      />
+      <SubHabitsDialog
+        gateway={gateway}
+        habit={dialog.kind === 'parts' ? (dialogHabit ?? null) : null}
+        onClose={closeDialog}
+      />
+      <DayPartsDialog
+        gateway={gateway}
+        today={today}
+        target={
+          dialog.kind === 'day-parts' && dialogHabit
+            ? { habit: dialogHabit, date: dialog.date }
+            : null
+        }
         onClose={closeDialog}
       />
       <DeleteHabitDialog

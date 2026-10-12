@@ -1,7 +1,7 @@
 import { toApiDate } from '@/shared/lib/dates';
 import { Dialog, useToast } from '@/shared/ui';
 import { useCreateHabit } from './habitMutations';
-import { EMPTY_HABIT } from './habitSchema';
+import { emptyHabit } from './habitSchema';
 import type { HabitInput, HabitsGateway } from './habitsGateway';
 import { HabitForm } from './HabitForm';
 
@@ -16,8 +16,7 @@ export function CreateHabitDialog({ gateway, open, onClose }: CreateHabitDialogP
   const toast = useToast();
 
   async function submit(input: HabitInput) {
-    // The habit counts from the person's today. The server's own date could be a day off.
-    await create.mutateAsync({ ...input, startDate: toApiDate(new Date()) });
+    await create.mutateAsync(input);
     toast.success('Habit added');
     onClose();
   }
@@ -25,7 +24,8 @@ export function CreateHabitDialog({ gateway, open, onClose }: CreateHabitDialogP
   return (
     <Dialog open={open} onClose={onClose} title="New habit">
       <HabitForm
-        initial={EMPTY_HABIT}
+        // The dialog's content mounts when it opens, so "today" is the day it was opened on.
+        initial={emptyHabit(toApiDate(new Date()))}
         submitLabel="Add habit"
         onSubmit={submit}
         onCancel={onClose}

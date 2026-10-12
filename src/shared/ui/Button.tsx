@@ -1,24 +1,9 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/shared/lib/cn';
+import { base, sizes, variants, type ButtonSize, type ButtonVariant } from './buttonStyles';
 import { Spinner } from './Spinner';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
-export type ButtonSize = 'md' | 'sm';
-
-const base =
-  'inline-flex cursor-pointer select-none items-center justify-center gap-2 rounded-full ' +
-  'font-display transition-colors disabled:cursor-not-allowed disabled:opacity-45';
-
-const variants: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-bg hover:bg-accent-hover active:bg-accent-pressed',
-  secondary: 'bg-accent-200 text-accent-800 hover:bg-accent-300 active:bg-accent-400',
-  ghost: 'text-accent-700 hover:bg-accent-100 active:bg-accent-200',
-};
-
-const sizes: Record<ButtonSize, string> = {
-  md: 'h-11 px-6 text-base',
-  sm: 'h-9 px-4 text-sm',
-};
+export type { ButtonSize, ButtonVariant } from './buttonStyles';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;

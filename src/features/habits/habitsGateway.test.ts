@@ -9,12 +9,23 @@ function gatewayFor(respond: FakeReply | (() => FakeReply)) {
   return { gateway: createHabitsGateway(createTypedApi(http)), requests: server.requests };
 }
 
+const weekly = (weekdays: number[]) => ({
+  kind: 'weekly',
+  weekdays,
+  interval: 1,
+  anchor: null,
+  occurrence: null,
+  weekday: null,
+  dayOfMonth: null,
+});
+
 const overview = [
   {
     id: 'h-1',
     title: 'Stretch',
-    schedule: [1, 3, 5],
+    recurrence: weekly([1, 3, 5]),
     startDate: '2026-10-01',
+    scheduledDates: ['2026-10-02', '2026-10-05', '2026-10-07'],
     completedDates: ['2026-10-05'],
     currentStreak: 1,
   },
@@ -22,7 +33,7 @@ const overview = [
 
 describe('habits gateway', () => {
   it('lists the habits without a range', async () => {
-    const habits = [{ id: 'h-1', title: 'Stretch', description: null, schedule: [1, 3] }];
+    const habits = [{ id: 'h-1', title: 'Stretch', description: null, recurrence: weekly([1, 3]) }];
     const { gateway, requests } = gatewayFor({ status: 200, data: habits });
 
     await expect(gateway.list()).resolves.toEqual(habits);
@@ -45,6 +56,33 @@ describe('habits gateway', () => {
     });
   });
 
+  it('asks for the statistics of a range with the client’s today', async () => {
+    const statistics = [
+      {
+        id: 'h-1',
+        title: 'Stretch',
+        recurrence: weekly([1, 3, 5]),
+        startDate: '2026-10-01',
+        unit: 'days',
+        planned: 4,
+        done: 3,
+        lastDoneOn: '2026-10-05',
+        subHabits: [],
+      },
+    ];
+    const { gateway, requests } = gatewayFor({ status: 200, data: statistics });
+
+    await expect(
+      gateway.statistics({ from: '2026-10-01', to: '2026-10-31', asOf: '2026-10-07' }),
+    ).resolves.toEqual(statistics);
+
+    expect(requests[0]).toMatchObject({
+      method: 'get',
+      url: '/habits/statistics',
+      params: { from: '2026-10-01', to: '2026-10-31', asOf: '2026-10-07' },
+    });
+  });
+
   it('reads one habit by id', async () => {
     const habit = { id: 'h 1', title: 'Stretch', description: null };
     const { gateway, requests } = gatewayFor({ status: 200, data: habit });
@@ -56,12 +94,12 @@ describe('habits gateway', () => {
   });
 
   it('creates a habit with its start date and returns what the server made', async () => {
-    const created = { id: 'h-2', title: 'Read', schedule: [1], startDate: '2026-10-07' };
+    const created = { id: 'h-2', title: 'Read', recurrence: weekly([1]), startDate: '2026-10-07' };
     const { gateway, requests } = gatewayFor({ status: 201, data: created });
     const input = {
       title: 'Read',
       description: null,
-      schedule: [1 as const],
+      recurrence: { kind: 'weekly' as const, weekdays: [1 as const], interval: 1 },
       startDate: '2026-10-07',
     };
 
@@ -70,17 +108,22 @@ describe('habits gateway', () => {
     expect(requests[0]).toMatchObject({ method: 'post', url: '/habits', body: input });
   });
 
-  it('updates the whole habit and sends no start date', async () => {
+  it('updates the whole habit, start date included', async () => {
     const { gateway, requests } = gatewayFor({ status: 204 });
+    const input = {
+      title: 'Stretch',
+      description: 'Morning',
+      recurrence: {
+        kind: 'monthlyOnWeekday' as const,
+        occurrence: 'last' as const,
+        weekday: 6 as const,
+      },
+      startDate: '2026-09-01',
+    };
 
-    await gateway.update('h-1', { title: 'Stretch', description: 'Morning', schedule: [2, 4] });
+    await gateway.update('h-1', input);
 
-    expect(requests[0]).toMatchObject({
-      method: 'put',
-      url: '/habits/h-1',
-      body: { title: 'Stretch', description: 'Morning', schedule: [2, 4] },
-    });
-    expect(requests[0]?.body).not.toHaveProperty('startDate');
+    expect(requests[0]).toMatchObject({ method: 'put', url: '/habits/h-1', body: input });
   });
 
   it('deletes a habit', async () => {
@@ -120,6 +163,178 @@ describe('habits gateway', () => {
     const { gateway } = gatewayFor({ status: 500 });
 
     await expect(gateway.unmark('h-1', '2026-10-07')).rejects.toMatchObject({ status: 500 });
+  });
+
+  it('puts a tag on a day with PUT on the day’s own address and returns the day', async () => {
+    const day = { date: '2026-10-07', tags: [{ id: 't-1', name: 'krank' }] };
+    const { gateway, requests } = gatewayFor({ status: 200, data: day });
+
+    await expect(gateway.tagDay('h-1', '2026-10-07', 't-1')).resolves.toEqual(day);
+
+    expect(requests[0]).toMatchObject({
+      method: 'put',
+      url: '/habits/h-1/days/2026-10-07/tags/t-1',
+    });
+  });
+
+  it('takes a tag off a day with DELETE and returns the day', async () => {
+    const day = { date: '2026-10-07', tags: [] };
+    const { gateway, requests } = gatewayFor({ status: 200, data: day });
+
+    await expect(gateway.untagDay('h-1', '2026-10-07', 't-1')).resolves.toEqual(day);
+
+    expect(requests[0]).toMatchObject({
+      method: 'delete',
+      url: '/habits/h-1/days/2026-10-07/tags/t-1',
+    });
+  });
+
+  describe('parts of a habit', () => {
+    const part = { id: 's-1', title: 'Legs', weekdays: [1, 4] };
+
+    it('adds a part with POST on the habit and returns it', async () => {
+      const { gateway, requests } = gatewayFor({ status: 201, data: part });
+
+      await expect(
+        gateway.addSubHabit('h-1', { title: 'Legs', weekdays: [1, 4] }),
+      ).resolves.toEqual(part);
+
+      expect(requests[0]).toMatchObject({
+        method: 'post',
+        url: '/habits/h-1/sub-habits',
+        body: { title: 'Legs', weekdays: [1, 4] },
+      });
+    });
+
+    it('changes a part with PUT on the part and returns it', async () => {
+      const { gateway, requests } = gatewayFor({ status: 200, data: part });
+
+      await expect(
+        gateway.updateSubHabit('h-1', 's-1', { title: 'Legs', weekdays: [1, 4] }),
+      ).resolves.toEqual(part);
+
+      expect(requests[0]).toMatchObject({
+        method: 'put',
+        url: '/habits/h-1/sub-habits/s-1',
+        body: { title: 'Legs', weekdays: [1, 4] },
+      });
+    });
+
+    it('removes a part with DELETE', async () => {
+      const { gateway, requests } = gatewayFor({ status: 204 });
+
+      await gateway.removeSubHabit('h-1', 's-1');
+
+      expect(requests[0]).toMatchObject({ method: 'delete', url: '/habits/h-1/sub-habits/s-1' });
+    });
+
+    it('writes a note with PUT on the part and day, and returns it', async () => {
+      const note = { date: '2026-10-07', text: '3 x 10' };
+      const { gateway, requests } = gatewayFor({ status: 200, data: note });
+
+      await expect(gateway.setSubHabitNote('h-1', 's-1', '2026-10-07', '3 x 10')).resolves.toEqual(
+        note,
+      );
+
+      expect(requests[0]).toMatchObject({
+        method: 'put',
+        url: '/habits/h-1/sub-habits/s-1/notes/2026-10-07',
+        body: { text: '3 x 10' },
+      });
+    });
+
+    it('reports a refused note: the 400 and its field, a part that is gone', async () => {
+      const blank = gatewayFor({
+        status: 400,
+        data: { title: 'Validation', status: 400, errors: { Text: ['Must not be empty.'] } },
+      });
+      await expect(
+        blank.gateway.setSubHabitNote('h-1', 's-1', '2026-10-07', ' '),
+      ).rejects.toMatchObject({ status: 400 });
+
+      const gone = gatewayFor({ status: 404, data: { title: 'Not found' } });
+      await expect(
+        gone.gateway.setSubHabitNote('h-1', 's-1', '2026-10-07', 'x'),
+      ).rejects.toMatchObject({ status: 404 });
+    });
+
+    it('takes a note away with DELETE, and does not mind one that is gone', async () => {
+      const taken = gatewayFor({ status: 204 });
+      await expect(
+        taken.gateway.clearSubHabitNote('h-1', 's-1', '2026-10-07'),
+      ).resolves.toBeUndefined();
+      expect(taken.requests[0]).toMatchObject({
+        method: 'delete',
+        url: '/habits/h-1/sub-habits/s-1/notes/2026-10-07',
+      });
+
+      const missing = gatewayFor({ status: 404, data: { title: 'Not found' } });
+      await expect(
+        missing.gateway.clearSubHabitNote('h-1', 's-1', '2026-10-07'),
+      ).resolves.toBeUndefined();
+
+      const broken = gatewayFor({ status: 500 });
+      await expect(
+        broken.gateway.clearSubHabitNote('h-1', 's-1', '2026-10-07'),
+      ).rejects.toMatchObject({ status: 500 });
+    });
+
+    it('does not treat removing a part that is gone as a failure, but reports the rest', async () => {
+      const gone = gatewayFor({ status: 404, data: { title: 'Not found' } });
+      await expect(gone.gateway.removeSubHabit('h-1', 's-1')).resolves.toBeUndefined();
+
+      const broken = gatewayFor({ status: 500 });
+      await expect(broken.gateway.removeSubHabit('h-1', 's-1')).rejects.toMatchObject({
+        status: 500,
+      });
+    });
+
+    it('ticks a part on a day with PUT on the day’s own address', async () => {
+      const day = { date: '2026-10-07', habitCompleted: true, completedSubHabitIds: ['s-1'] };
+      const { gateway, requests } = gatewayFor({ status: 200, data: day });
+
+      await expect(gateway.markSubHabit('h-1', 's-1', '2026-10-07')).resolves.toBeUndefined();
+
+      expect(requests[0]).toMatchObject({
+        method: 'put',
+        url: '/habits/h-1/sub-habits/s-1/records/2026-10-07',
+      });
+    });
+
+    it('takes a part’s tick back with DELETE, and a tick that is not there is not a failure', async () => {
+      const day = { date: '2026-10-07', habitCompleted: false, completedSubHabitIds: [] };
+      const taken = gatewayFor({ status: 200, data: day });
+      await taken.gateway.unmarkSubHabit('h-1', 's-1', '2026-10-07');
+      expect(taken.requests[0]).toMatchObject({
+        method: 'delete',
+        url: '/habits/h-1/sub-habits/s-1/records/2026-10-07',
+      });
+
+      const missing = gatewayFor({ status: 404, data: { title: 'Not found' } });
+      await expect(
+        missing.gateway.unmarkSubHabit('h-1', 's-1', '2026-10-07'),
+      ).resolves.toBeUndefined();
+
+      const broken = gatewayFor({ status: 500 });
+      await expect(broken.gateway.unmarkSubHabit('h-1', 's-1', '2026-10-07')).rejects.toMatchObject(
+        { status: 500 },
+      );
+    });
+
+    it('reports a failed tick, a failed add and a refused change as they are', async () => {
+      const refusal = { status: 400, data: { title: 'A business rule was violated.' } };
+      const { gateway } = gatewayFor(refusal);
+
+      await expect(gateway.markSubHabit('h-1', 's-1', '2026-10-07')).rejects.toMatchObject({
+        status: 400,
+      });
+      await expect(
+        gateway.addSubHabit('h-1', { title: 'Legs', weekdays: [1] }),
+      ).rejects.toMatchObject({ status: 400 });
+      await expect(
+        gateway.updateSubHabit('h-1', 's-1', { title: 'Legs', weekdays: [1] }),
+      ).rejects.toMatchObject({ status: 400 });
+    });
   });
 
   it('reports a 404 of any other call', async () => {

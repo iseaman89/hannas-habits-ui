@@ -1,4 +1,4 @@
-import { Link, useMatch } from 'react-router-dom';
+import { Link, matchPath, useLocation } from 'react-router-dom';
 import { Calendar, ListChecks, LogOut, Sun, Target, type LucideIcon } from 'lucide-react';
 import { useAuth, useUser } from '@/features/auth';
 import { cn } from '@/shared/lib/cn';
@@ -7,8 +7,11 @@ import { BrandMark, IconButton, ThemeSwitch, useTheme } from '@/shared/ui';
 
 interface NavEntry {
   to: string;
-  /** Route prefix that marks the entry as current, when it differs from `to` (Today -> /diary/…). */
-  match?: string;
+  /**
+   * Route prefix(es) that mark the entry as current, when they differ from `to` (Today ->
+   * /diary/…, Habits -> its statistics too).
+   */
+  match?: string | readonly string[];
   label: string;
   Icon: LucideIcon;
 }
@@ -16,13 +19,14 @@ interface NavEntry {
 const NAV: readonly NavEntry[] = [
   // "Today" always goes to the real today (the index route redirects), also from a past diary day.
   { to: '/', match: '/diary', label: 'Today', Icon: Sun },
-  { to: '/habits', label: 'Habits', Icon: ListChecks },
+  { to: '/habits', match: ['/habits', '/statistics'], label: 'Habits', Icon: ListChecks },
   { to: '/calendar', label: 'Calendar', Icon: Calendar },
   { to: '/resolutions', label: 'Resolutions', Icon: Target },
 ];
 
 function NavItem({ to, match = to, label, Icon }: NavEntry) {
-  const current = useMatch({ path: match, end: false }) !== null;
+  const { pathname } = useLocation();
+  const current = [match].flat().some((path) => matchPath({ path, end: false }, pathname) !== null);
 
   return (
     <Link

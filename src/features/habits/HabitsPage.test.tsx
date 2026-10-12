@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,7 +15,7 @@ const stretch: FakeHabit = {
   id: 'h-stretch',
   title: 'Stretch',
   description: 'Ten minutes, every morning',
-  schedule: [0, 1, 2, 3, 4, 5, 6],
+  weekdays: [0, 1, 2, 3, 4, 5, 6],
   startDate: '2026-10-01',
   completed: ['2026-10-05', '2026-10-06'],
 };
@@ -23,7 +23,7 @@ const stretch: FakeHabit = {
 const read: FakeHabit = {
   id: 'h-read',
   title: 'Read',
-  schedule: [1, 3, 5], // Mon, Wed, Fri
+  weekdays: [1, 3, 5], // Mon, Wed, Fri
   startDate: '2026-09-01',
   completed: [],
 };
@@ -402,7 +402,12 @@ describe('adding a habit', () => {
 
     expect(await screen.findByRole('rowheader', { name: /Meditate/ })).toBeInTheDocument();
     expect(fake.calls.create).toEqual([
-      { title: 'Meditate', description: null, schedule: [1, 2, 3, 4, 5], startDate: '2026-10-07' },
+      {
+        title: 'Meditate',
+        description: null,
+        recurrence: { kind: 'weekly', weekdays: [1, 2, 3, 4, 5], interval: 1 },
+        startDate: '2026-10-07',
+      },
     ]);
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByRole('status')).toHaveTextContent('Habit added');
@@ -478,12 +483,39 @@ describe('editing a habit', () => {
         input: {
           title: 'Stretch more',
           description: 'Ten minutes, every morning',
-          schedule: [1, 2, 3, 4, 5, 6],
+          recurrence: { kind: 'weekly', weekdays: [1, 2, 3, 4, 5, 6], interval: 1 },
+          startDate: '2026-10-01',
         },
       },
     ]);
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByRole('status')).toHaveTextContent('Habit saved');
+  });
+
+  it('lets an earlier start date make earlier days tickable', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([stretch]);
+    renderPage(fake, '/habits?month=2026-09');
+    const before = await screen.findByRole('img', {
+      name: 'Stretch, Sun 20 Sep: before the habit started',
+    });
+    expect(before).toBeInTheDocument();
+    const dialog = await openEdit(user, 'Stretch');
+
+    expect(await within(dialog).findByLabelText('Starts on')).toHaveValue('2026-10-01');
+    fireEvent.change(within(dialog).getByLabelText('Starts on'), {
+      target: { value: '2026-09-20' },
+    });
+    await user.click(within(dialog).getByRole('button', { name: /^Save changes/ }));
+
+    await waitFor(() => expect(fake.calls.update[0]?.input.startDate).toBe('2026-09-20'));
+    await user.click(await screen.findByRole('button', { name: 'Stretch, Sun 20 Sep' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Stretch, Sun 20 Sep' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      ),
+    );
   });
 
   it('sends a cleared note as "no note"', async () => {
@@ -511,7 +543,8 @@ describe('editing a habit', () => {
     await fake.gateway.update('h-stretch', {
       title: 'Stretch and breathe',
       description: null,
-      schedule: [1],
+      recurrence: { kind: 'weekly', weekdays: [1], interval: 1 },
+      startDate: '2026-10-01',
     });
     const second = await openEdit(user, 'Stretch');
 
@@ -585,5 +618,350 @@ describe('deleting a habit', () => {
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Not today.');
     expect(screen.getByRole('rowheader', { name: /Read/ })).toBeInTheDocument();
+  });
+});
+
+describe('recurrence rules', () => {
+  // Saturday 31 October is the last Saturday of the month; Saturday 17 the third one.
+  const lastSaturday: FakeHabit = {
+    id: 'h-market',
+    title: 'Market day',
+    recurrence: {
+      kind: 'monthlyOnWeekday',
+      weekdays: [],
+      interval: 1,
+      anchor: null,
+      occurrence: 'last',
+      weekday: 6,
+      dayOfMonth: null,
+      times: null,
+    },
+    startDate: '2026-09-01',
+    completed: [],
+  };
+
+  async function openEdit(user: ReturnType<typeof userEvent.setup>, title: string) {
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: `Edit ${title}` }));
+    return screen.findByRole('dialog', { name: 'Edit habit' });
+  }
+
+  it('draws the days the server names as due, and the rule in words under the habit', async () => {
+    const fake = fakeHabits([lastSaturday]);
+    renderPage(fake);
+    await screen.findByRole('table');
+
+    expect(within(rowOf('Market day')).getByText('Last Saturday of the month')).toBeInTheDocument();
+    // The 31st is the one day; every other Saturday is not on the plan, and no weekday logic of
+    // the client may decide otherwise.
+    expect(
+      screen.getByRole('img', { name: 'Market day, Sat 31 Oct: upcoming' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Market day, Sat 10 Oct: not scheduled' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Market day, Sun 4 Oct: not scheduled' }),
+    ).toBeInTheDocument();
+  });
+
+  it('follows the server when a day the rule names is today: tickable, and counted', async () => {
+    const onToday: FakeHabit = {
+      ...lastSaturday,
+      id: 'h-monthly',
+      title: 'Pay rent',
+      recurrence: {
+        ...lastSaturday.recurrence!,
+        kind: 'monthlyOnDate',
+        dayOfMonth: 7,
+        weekday: null,
+        occurrence: null,
+      },
+    };
+    const user = userEvent.setup();
+    const fake = fakeHabits([onToday]);
+    renderPage(fake);
+
+    await user.click(await screen.findByRole('button', { name: 'Pay rent, Wed 7 Oct' }));
+
+    expect(fake.marksOf('h-monthly')).toEqual(['2026-10-07']);
+  });
+
+  it('adds a habit that repeats every other week, counted from its start date', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([stretch]);
+    renderPage(fake);
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: 'New habit' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New habit' });
+
+    await user.type(within(dialog).getByLabelText('What do you want to do?'), 'Laundry');
+    await user.click(within(dialog).getByRole('button', { name: 'Weekends' }));
+    const weeks = within(dialog).getByLabelText('Every how many weeks?');
+    await user.clear(weeks);
+    await user.type(weeks, '2');
+
+    expect(
+      within(dialog).getByText(
+        'Every 2nd week on weekends, starting with the week of Mon 5 Oct 2026',
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Add habit' }));
+
+    await waitFor(() => expect(fake.calls.create).toHaveLength(1));
+    // No anchor of its own: the server counts from the start date it saves.
+    expect(fake.calls.create[0]?.recurrence).toEqual({
+      kind: 'weekly',
+      weekdays: [6, 0],
+      interval: 2,
+    });
+    // This week (Sat 10, Sun 11 are not before the start: it starts Wed 7): due. The next ones are not.
+    expect(
+      await screen.findByRole('img', { name: 'Laundry, Sat 10 Oct: upcoming' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Laundry, Sat 17 Oct: not scheduled' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Laundry, Sat 24 Oct: upcoming' })).toBeInTheDocument();
+  });
+
+  it('saves a changed rule, says it re-judges the past, and redraws the grid from the server', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([stretch]);
+    renderPage(fake);
+    const dialog = await openEdit(user, 'Stretch');
+    await within(dialog).findByLabelText('What do you want to do?');
+    // Nothing changed yet: nothing to warn about.
+    expect(within(dialog).queryByText(/also applies to days that have passed/)).toBeNull();
+
+    await user.selectOptions(within(dialog).getByLabelText('Repeat'), 'monthlyOnWeekday');
+    await user.selectOptions(within(dialog).getByLabelText('Which one?'), 'last');
+    await user.selectOptions(within(dialog).getByLabelText('Weekday'), 'Saturday');
+
+    expect(within(dialog).getByText('Last Saturday of the month')).toBeInTheDocument();
+    expect(within(dialog).getByText(/also applies to days that have passed/)).toBeInTheDocument();
+    // "3×/week" is not true of this rule.
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() =>
+      expect(fake.calls.update[0]?.input.recurrence).toEqual({
+        kind: 'monthlyOnWeekday',
+        occurrence: 'last',
+        weekday: 6,
+      }),
+    );
+    // Monday 5 Oct was done, and is not due any more: kept on the server, drawn as not scheduled.
+    expect(
+      await screen.findByRole('img', { name: 'Stretch, Mon 5 Oct: not scheduled' }),
+    ).toBeInTheDocument();
+    expect(fake.marksOf('h-stretch')).toEqual(['2026-10-05', '2026-10-06']);
+  });
+
+  it('keeps the rhythm of a habit when its start date is moved', async () => {
+    const everyOtherWeek: FakeHabit = {
+      id: 'h-bins',
+      title: 'Bins out',
+      recurrence: {
+        kind: 'weekly',
+        weekdays: [3],
+        interval: 2,
+        anchor: '2026-10-07',
+        occurrence: null,
+        weekday: null,
+        dayOfMonth: null,
+        times: null,
+      },
+      startDate: '2026-10-01',
+      completed: [],
+    };
+    const user = userEvent.setup();
+    const fake = fakeHabits([everyOtherWeek]);
+    renderPage(fake);
+    const dialog = await openEdit(user, 'Bins out');
+    await within(dialog).findByLabelText('What do you want to do?');
+
+    fireEvent.change(within(dialog).getByLabelText('Starts on'), {
+      target: { value: '2026-09-01' },
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    // The anchor it had goes back as it was - not the new start date.
+    await waitFor(() =>
+      expect(fake.calls.update[0]?.input.recurrence).toEqual({
+        kind: 'weekly',
+        weekdays: [3],
+        interval: 2,
+        anchor: '2026-10-07',
+      }),
+    );
+    expect(fake.calls.update[0]?.input.startDate).toBe('2026-09-01');
+  });
+});
+
+describe('a quota ("3 times a week")', () => {
+  // Today is Wednesday 7 October: the week of 5 - 11 October has two of its three.
+  const gym: FakeHabit = {
+    id: 'h-gym',
+    title: 'Gym',
+    recurrence: {
+      kind: 'timesPerWeek',
+      weekdays: [],
+      interval: 1,
+      anchor: null,
+      occurrence: null,
+      weekday: null,
+      dayOfMonth: null,
+      times: 3,
+    },
+    startDate: '2026-09-01',
+    completed: ['2026-10-05', '2026-10-06'],
+  };
+
+  it('says the rule and how far this week has come, and counts the streak in weeks', async () => {
+    const fake = fakeHabits([gym]);
+    renderPage(fake);
+    await screen.findByRole('table');
+
+    expect(within(rowOf('Gym')).getByText('3 times a week · 2 of 3 this week')).toBeInTheDocument();
+    expect(streakOf('Gym')).toBe('Current streak: 2 weeks');
+  });
+
+  it('draws no day as missed: a past day that was not ticked is open and can be ticked', async () => {
+    const fake = fakeHabits([gym]);
+    renderPage(fake);
+    await screen.findByRole('table');
+
+    // Fri 2 Oct was neither done nor "due": the server lists it, and it is open.
+    expect(cell('Gym, Fri 2 Oct')).toHaveAttribute('aria-pressed', 'false');
+    expect(cell('Gym, Mon 5 Oct')).toHaveAttribute('aria-pressed', 'true');
+    expect(cell('Gym, Wed 7 Oct')).toHaveAttribute('aria-pressed', 'false'); // today
+    expect(screen.queryByRole('img', { name: /Gym.*missed/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Gym, Thu 8 Oct: upcoming' })).toBeInTheDocument();
+  });
+
+  it('moves the number of the week at once when a day is ticked, and the streak after the answer', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([gym]);
+    renderPage(fake);
+    await screen.findByRole('table');
+
+    await user.click(cell('Gym, Wed 7 Oct'));
+
+    expect(within(rowOf('Gym')).getByText('3 times a week · 3 of 3 this week')).toBeInTheDocument();
+    await waitFor(() => expect(streakOf('Gym')).toBe('Current streak: 3 weeks'));
+    expect(fake.marksOf('h-gym')).toEqual(['2026-10-05', '2026-10-06', '2026-10-07']);
+  });
+
+  it('takes a day back out of the week', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([gym]);
+    renderPage(fake);
+    await screen.findByRole('table');
+
+    await user.click(cell('Gym, Mon 5 Oct'));
+
+    expect(within(rowOf('Gym')).getByText('3 times a week · 1 of 3 this week')).toBeInTheDocument();
+    await waitFor(() => expect(fake.marksOf('h-gym')).toEqual(['2026-10-06']));
+  });
+
+  it('counts a day of the week before into that week, not into this one', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([gym]);
+    renderPage(fake);
+    await screen.findByRole('table');
+
+    await user.click(cell('Gym, Sun 4 Oct'));
+
+    // Sunday 4 October is the last day of the week before: this week's number stays.
+    expect(within(rowOf('Gym')).getByText('3 times a week · 2 of 3 this week')).toBeInTheDocument();
+    await waitFor(() => expect(fake.marksOf('h-gym')).toContain('2026-10-04'));
+  });
+
+  it('explains the open ring in the legend only when there is such a habit', async () => {
+    const withQuota = fakeHabits([gym]);
+    renderPage(withQuota);
+    await screen.findByRole('table');
+
+    expect(screen.getByText('Not done (any day counts)')).toBeInTheDocument();
+  });
+
+  it('has no such legend entry for habits with due days', async () => {
+    renderPage(fakeHabits([stretch]));
+    await screen.findByRole('table');
+
+    expect(screen.queryByText('Not done (any day counts)')).not.toBeInTheDocument();
+  });
+
+  it('shows only the rule in a month that does not hold this week', async () => {
+    const fake = fakeHabits([gym]);
+    renderPage(fake, '/habits?month=2026-08');
+    await screen.findByRole('table');
+
+    expect(within(rowOf('Gym')).getByText('3 times a week')).toBeInTheDocument();
+    expect(within(rowOf('Gym')).queryByText(/this week/)).not.toBeInTheDocument();
+  });
+
+  it('adds a habit that is done a number of times a week', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([stretch]);
+    renderPage(fake);
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: 'New habit' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New habit' });
+
+    await user.type(within(dialog).getByLabelText('What do you want to do?'), 'Swim');
+    await user.selectOptions(within(dialog).getByLabelText('Repeat'), 'timesPerWeek');
+    await user.click(within(dialog).getByRole('button', { name: /^Add habit/ }));
+
+    await waitFor(() => expect(fake.calls.create).toHaveLength(1));
+    expect(fake.calls.create[0]?.recurrence).toEqual({ kind: 'timesPerWeek', times: 3 });
+    // It starts today: the week has none of its three yet.
+    expect(
+      await within(await screen.findByRole('table')).findByText(
+        '3 times a week · 0 of 3 this week',
+      ),
+    ).toBeInTheDocument();
+    expect(cell('Swim, Wed 7 Oct')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('edits the count', async () => {
+    const user = userEvent.setup();
+    const fake = fakeHabits([gym]);
+    renderPage(fake);
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: 'Edit Gym' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit habit' });
+
+    const times = await within(dialog).findByLabelText('How many times a week?');
+    expect(times).toHaveValue(3);
+    await user.clear(times);
+    await user.type(times, '4');
+    await user.click(within(dialog).getByRole('button', { name: /^Save changes/ }));
+
+    await waitFor(() =>
+      expect(fake.calls.update[0]?.input.recurrence).toEqual({ kind: 'timesPerWeek', times: 4 }),
+    );
+    expect(await screen.findByText('4 times a week · 2 of 4 this week')).toBeInTheDocument();
+  });
+});
+
+describe('the statistics link', () => {
+  it('opens the statistics of the month on screen', async () => {
+    renderPage(fakeHabits([stretch]));
+    await screen.findByRole('table');
+
+    // The current month keeps the address clean.
+    expect(screen.getByRole('link', { name: 'Statistics' })).toHaveAttribute('href', '/statistics');
+  });
+
+  it('carries another month along', async () => {
+    renderPage(fakeHabits([stretch]), '/habits?month=2026-09');
+    await screen.findByRole('table');
+
+    expect(screen.getByRole('link', { name: 'Statistics' })).toHaveAttribute(
+      'href',
+      '/statistics?month=2026-09',
+    );
   });
 });
