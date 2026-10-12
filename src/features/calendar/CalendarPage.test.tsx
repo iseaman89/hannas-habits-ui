@@ -94,6 +94,22 @@ describe('the year', () => {
     ]);
   });
 
+  it('lays the months out as a rectangle - 4 × 3, 3 × 4, 2 × 6, 1 × 12 - by the room the grid has', async () => {
+    renderPage(entries());
+    const grid = (await screen.findByRole('table', { name: 'October' })).closest('.grid')!;
+
+    // jsdom has no layout, so the classes are what can be pinned. The breakpoints are container
+    // queries: they ask the grid's parent, not the screen (the sidebar takes room from `lg` up).
+    expect(grid.children).toHaveLength(12);
+    expect(grid).toHaveClass(
+      'grid-cols-1',
+      '@lg:grid-cols-2',
+      '@3xl:grid-cols-3',
+      '@5xl:grid-cols-4',
+    );
+    expect(grid.parentElement).toHaveClass('@container');
+  });
+
   it('asks for the whole year in one request', async () => {
     const diary = entries();
     renderPage(diary);
@@ -380,7 +396,10 @@ describe('loading, failing and nothing to show', () => {
     const release = diary.hold();
     renderPage(diary);
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Loading the calendar');
+    const loading = await screen.findByRole('status');
+    expect(loading).toHaveTextContent('Loading the calendar');
+    // The same rectangle as the months, so nothing jumps when they arrive.
+    expect(loading).toHaveClass('grid-cols-1', '@lg:grid-cols-2', '@5xl:grid-cols-4');
     expect(screen.getByText('No mood')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
 
